@@ -44,7 +44,7 @@ Three.js r169、CSS2DRenderer 与后期处理 addons 通过 jsDelivr CDN 加载�
 
 - 支持 WebGL 2 的现代浏览器（Chrome / Edge / Firefox / Safari 新版）
 - 首次打开需要联网（Three.js 与 HDR 走 CDN）；HDR 拉取失败会自动回退到程序化环境，不会黑屏
-- 「验证」章节的脚本需要 Node.js，并会在本机拉起 Edge 无头浏览器；Edge 路径在脚本内硬编码，换机器需自行修改
+- 「验证」章节的脚本需要 Node.js 20.11+（出图目录用 `import.meta.dirname` 定位），并会在本机拉起 Edge 无头浏览器；Edge 路径在脚本内硬编码，换机器需自行修改
 
 ## V10.0 更新 · 空腔墙体 / 结构透视 / 可行走室内
 

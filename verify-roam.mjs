@@ -6,7 +6,7 @@ import { join } from 'node:path';
 const APP = `http://127.0.0.1:8011/villa.html?roam=${Date.now()}`;
 const PORT = 9246;
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const OUT = 'C:\\Users\\Admin1（无密码）\\.cline\\data\\workspaces\\chat\\3d-villa\\';
+const OUT = import.meta.dirname + '/';
 const profile = mkdtempSync(join(tmpdir(), 'edge-villa-roam-'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
