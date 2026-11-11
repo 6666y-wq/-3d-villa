@@ -3,7 +3,7 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const APP = `http://127.0.0.1:8000/villa.html?verify=${Date.now()}`;
+const APP = `http://127.0.0.1:8000/index.html?verify=${Date.now()}`;
 const PORT = 9233;
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const OUT = import.meta.dirname + '/';
@@ -25,7 +25,7 @@ async function findTarget() {
   for (let i = 0; i < 60; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-      const t = list.find((x) => x.type === 'page' && x.url.includes('villa.html'));
+      const t = list.find((x) => x.type === 'page' && x.url.includes('index.html'));
       if (t) return t;
     } catch { /* 端口还没起来 */ }
     await sleep(400);

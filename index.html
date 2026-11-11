@@ -2225,7 +2225,7 @@
     // ---------- 如何把圆锥体树换成下载的高质量树木模型 ----------
     // 1. 从 Poly Haven / Sketchfab / Quaternius 下载带贴图的 .glb（不要用几十 MB 的扫描模型，
     //    单棵树 1~5 MB、面数 1 万左右最适合这个场景）；
-    // 2. 放到 villa.html 同目录的 models/ 文件夹，例如 models/tree_oak.glb（建议用本地服务器打开）；
+    // 2. 放到 index.html 同目录的 models/ 文件夹，例如 models/tree_oak.glb（建议用本地服务器打开）；
     // 3. 把下面 TREE_MODEL_URL 改成 'models/tree_oak.glb'，刷新页面即可用外模替换 5 棵 Low-Poly 树；
     // 4. 若只想替换其中一棵，保持 TREE_MODEL_URL 为空，手动调用：
     //    loadModel('models/tree_oak.glb', [-11.6, 0, 8.4], { scale: 1.05, rotationY: 0.6 });

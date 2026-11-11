@@ -1,5 +1,5 @@
 const fs = require('fs');
-const s = fs.readFileSync('villa.html', 'utf8');
+const s = fs.readFileSync('index.html', 'utf8');
 const marker = '<script type="module">';
 const i = s.lastIndexOf(marker);
 const j = s.indexOf('</script>', i);

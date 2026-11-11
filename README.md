@@ -12,7 +12,7 @@
 python -m http.server 8000
 ```
 
-然后打开 <http://localhost:8000/villa.html>。
+然后打开 <http://localhost:8000/index.html>。
 
 Three.js r169、CSS2DRenderer 与后期处理 addons 通过 jsDelivr CDN 加载，首次打开需要联网。HDR 环境贴图（`royal_esplanade_1k.hdr`）同样走 jsDelivr；如果网络不可用，页面会自动回退到程序化 Canvas 渐变环境，不会黑屏或中断渲染。
 
@@ -258,9 +258,9 @@ Three.js r169、CSS2DRenderer 与后期处理 addons 通过 jsDelivr CDN 加载�
 
 ## 文件
 
-- `villa.html`：完整场景（HTML + CSS + ES Module）
+- `index.html`：完整场景（HTML + CSS + ES Module）
 - `_ui-check.mjs`：V10.0 UI 交互验证脚本（透视开关 / 单层剖切 / 屋顶淡出 / 标签与灯光隔离 / 进门与上楼 / 控制台错误）
-- `_extract.cjs`：把 `villa.html` 里的模块脚本抽成临时文件，配合 `node --check` 做语法体检
+- `_extract.cjs`：把 `index.html` 里的模块脚本抽成临时文件，配合 `node --check` 做语法体检
 - `verify-courtyard.mjs`：庭院 / 昼夜粒子 / Bloom / 室内灯 / 楼层联动自动化验证脚本
 - `verify-roam.mjs`：第一人称漫游自动化验证脚本（指针锁定 / WASD / 碰撞 / 退出还原）
 - `verify-pbr.mjs`：V9.0 自动化验证脚本（HDR / ACES / 指数雾 / PBR 材质 / 草地风场 / 水面涟漪 / 星空闪烁 / 萤火虫点光 / GLTFLoader / 实例化 / 森林）
@@ -351,11 +351,11 @@ Three.js r169、CSS2DRenderer 与后期处理 addons 通过 jsDelivr CDN 加载�
 | `royal_esplanade_1k.hdr` 环境贴图 | Three.js 官方示例资源（原始素材由 Poly Haven 提供） | CC0 |
 | 其余全部纹理 | 本项目 Canvas 2D 程序化生成 | 同本仓库许可 |
 
-HDR 地址在 `villa.html` 的 `ENV_HDR_URL` 里，换成自己的素材只需改这一行；商用前请再次确认所替换素材的许可。
+HDR 地址在 `index.html` 的 `ENV_HDR_URL` 里，换成自己的素材只需改这一行；商用前请再次确认所替换素材的许可。
 
 ## 贡献
 
-- 保持 `villa.html` 单文件、无构建依赖
+- 保持 `index.html` 单文件、无构建依赖
 - 新增可调参数放进顶部 `CONFIG`，不要在业务代码里散落魔法数字
 - 会改变渲染结果的改动，请跑对应验证脚本（见「验证」）并附上出图
 - 提交信息建议用 `feat:` / `fix:` / `perf:` / `docs:` 前缀

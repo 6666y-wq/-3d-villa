@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const PORT = 9251;
-const APP = 'http://127.0.0.1:8011/villa.html?diag=' + Date.now();
+const APP = 'http://127.0.0.1:8011/index.html?diag=' + Date.now();
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const OUT = import.meta.dirname + '/';
 const profile = mkdtempSync(join(tmpdir(), 'edge-villa-diag-'));
@@ -21,7 +21,7 @@ async function findTarget() {
   for (let i = 0; i < 75; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-      const t = list.find((x) => x.type === 'page' && x.url.includes('villa.html'));
+      const t = list.find((x) => x.type === 'page' && x.url.includes('index.html'));
       if (t) return t;
     } catch { /* wait */ }
     await sleep(400);

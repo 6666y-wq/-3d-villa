@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const PORT = 9242;
-const APP = 'http://127.0.0.1:8011/villa.html?inspect=' + Date.now();
+const APP = 'http://127.0.0.1:8011/index.html?inspect=' + Date.now();
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const profile = mkdtempSync(join(tmpdir(), 'edge-villa-inspect-'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
