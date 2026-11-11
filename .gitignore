@@ -1,0 +1,5 @@
+*.log
+*.pid
+_syntax-check.mjs
+diag-*.png
+node_modules/

@@ -1,0 +1,5259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新中式三层别墅 · 3D</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #232327;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    #scene {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .hud {
+      position: fixed;
+      left: 24px;
+      bottom: 22px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(20, 20, 24, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      color: rgba(240, 240, 245, 0.82);
+      font-size: 13px;
+      line-height: 1.7;
+      letter-spacing: 0.2px;
+      pointer-events: none;
+      user-select: none;
+      z-index: 5;
+    }
+    .hud strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #f4f4f8;
+      letter-spacing: 1px;
+    }
+    .hud span { opacity: 0.7; }
+
+    /* ---------- 3D 空间标签（CSS2DRenderer） ---------- */
+    .label-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .room-label {
+      position: absolute;
+      padding: 4px 10px 4px 8px;
+      border-radius: 999px;
+      background: rgba(8, 10, 16, 0.5);
+      border: 1px solid rgba(130, 190, 255, 0.24);
+      box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.28),
+        0 0 10px rgba(84, 166, 255, 0.12);
+      color: rgba(240, 246, 255, 0.94);
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+      text-shadow: 0 0 5px rgba(120, 190, 255, 0.42);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      pointer-events: none;
+      user-select: none;
+    }
+    .room-label::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      margin-right: 5px;
+      border-radius: 50%;
+      background: #9be0ff;
+      box-shadow: 0 0 4px rgba(108, 201, 255, 0.7);
+      vertical-align: 1px;
+    }
+    /* 去掉以前向下伸出的尖角，保持小气泡的干净轮廓 */
+    .room-label::after { display: none; }
+
+    /* ---------- 楼层分层显示控制面板 ---------- */
+    .floor-panel {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      width: 212px;
+      padding: 14px 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(160deg, rgba(40, 47, 60, 0.72), rgba(14, 16, 22, 0.66));
+      border: 1px solid rgba(122, 178, 255, 0.3);
+      box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.48),
+        0 0 24px rgba(96, 156, 255, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      backdrop-filter: blur(16px) saturate(150%);
+      -webkit-backdrop-filter: blur(16px) saturate(150%);
+      color: rgba(236, 242, 255, 0.9);
+      user-select: none;
+      z-index: 10;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    .floor-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 18px;
+      right: 18px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(150, 200, 255, 0.75), transparent);
+      border-radius: 1px;
+    }
+    .floor-panel__title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: #eaf2ff;
+    }
+    .floor-panel__hint {
+      margin: 4px 0 12px;
+      font-size: 11px;
+      line-height: 1.5;
+      letter-spacing: 0.4px;
+      color: rgba(200, 214, 235, 0.55);
+    }
+    .floor-btn {
+      appearance: none;
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(140, 180, 255, 0.18);
+      background: rgba(255, 255, 255, 0.045);
+      color: rgba(226, 234, 250, 0.82);
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: 0.6px;
+      cursor: pointer;
+      transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease,
+        transform 0.12s ease;
+    }
+    .floor-btn + .floor-btn { margin-top: 8px; }
+    .floor-btn:hover {
+      background: rgba(120, 168, 255, 0.14);
+      border-color: rgba(140, 190, 255, 0.42);
+      color: #f2f7ff;
+      box-shadow: 0 0 14px rgba(96, 156, 255, 0.24);
+    }
+    .floor-btn:active { transform: translateY(1px); }
+    .floor-btn:focus-visible {
+      outline: 2px solid rgba(140, 190, 255, 0.6);
+      outline-offset: 2px;
+    }
+    .floor-btn.is-active {
+      background: linear-gradient(180deg, rgba(96, 156, 255, 0.34), rgba(56, 110, 210, 0.28));
+      border-color: rgba(150, 200, 255, 0.78);
+      color: #ffffff;
+      box-shadow:
+        0 0 16px rgba(96, 156, 255, 0.42),
+        inset 0 0 12px rgba(150, 200, 255, 0.18);
+    }
+
+    /* ---------- 昼夜切换 ---------- */
+    .panel-divider {
+      height: 1px;
+      margin: 12px 2px 10px;
+      background: linear-gradient(90deg, transparent, rgba(150, 200, 255, 0.28), transparent);
+    }
+    .floor-panel__title + .daynight-btn { margin-top: 8px; }
+    .daynight-btn {
+      border-color: rgba(255, 196, 120, 0.3);
+      background: rgba(255, 190, 110, 0.08);
+      color: rgba(255, 234, 202, 0.9);
+    }
+    .daynight-btn:hover {
+      background: rgba(255, 190, 110, 0.17);
+      border-color: rgba(255, 205, 135, 0.58);
+      color: #fff8ee;
+      box-shadow: 0 0 14px rgba(255, 170, 80, 0.26);
+    }
+    .daynight-btn.is-night {
+      background: linear-gradient(180deg, rgba(88, 132, 190, 0.36), rgba(26, 48, 86, 0.5));
+      border-color: rgba(130, 180, 255, 0.72);
+      color: #eaf3ff;
+      box-shadow:
+        0 0 16px rgba(90, 150, 255, 0.34),
+        inset 0 0 12px rgba(120, 180, 255, 0.16);
+    }
+
+    /* ---------- 第一人称漫游 ---------- */
+    .roam-btn {
+      border-color: rgba(120, 235, 190, 0.28);
+      background: rgba(96, 220, 170, 0.08);
+      color: rgba(214, 255, 238, 0.9);
+    }
+    .roam-btn:hover {
+      background: rgba(96, 220, 170, 0.17);
+      border-color: rgba(130, 245, 200, 0.58);
+      color: #f2fffa;
+      box-shadow: 0 0 14px rgba(70, 220, 160, 0.26);
+    }
+    .roam-btn.is-active {
+      background: linear-gradient(180deg, rgba(72, 200, 150, 0.36), rgba(20, 96, 76, 0.5));
+      border-color: rgba(140, 250, 205, 0.72);
+      color: #f0fff9;
+      box-shadow:
+        0 0 16px rgba(60, 220, 160, 0.38),
+        inset 0 0 12px rgba(140, 255, 210, 0.16);
+    }
+
+    /* ---------- 外墙透视（结构视图） ---------- */
+    .xray-btn {
+      border-color: rgba(120, 215, 255, 0.3);
+      background: rgba(80, 190, 255, 0.08);
+      color: rgba(216, 245, 255, 0.92);
+    }
+    .xray-btn:hover {
+      background: rgba(80, 190, 255, 0.17);
+      border-color: rgba(130, 225, 255, 0.6);
+      color: #f2fcff;
+      box-shadow: 0 0 14px rgba(70, 190, 255, 0.28);
+    }
+    .xray-btn.is-active {
+      background: linear-gradient(180deg, rgba(70, 190, 255, 0.34), rgba(18, 84, 132, 0.5));
+      border-color: rgba(150, 232, 255, 0.78);
+      color: #f4fdff;
+      box-shadow:
+        0 0 16px rgba(70, 195, 255, 0.42),
+        inset 0 0 12px rgba(150, 232, 255, 0.18);
+    }
+
+    /* 漫游准星：只做视觉提示，不拦截鼠标事件 */
+    .roam-crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+    .roam-crosshair.is-visible { opacity: 1; }
+    .roam-crosshair::before,
+    .roam-crosshair::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: rgba(226, 255, 246, 0.85);
+      box-shadow: 0 0 6px rgba(120, 255, 220, 0.9);
+    }
+    .roam-crosshair::before {
+      width: 1px;
+      height: 100%;
+      transform: translate(-50%, -50%);
+    }
+    .roam-crosshair::after {
+      width: 100%;
+      height: 1px;
+      transform: translate(-50%, -50%);
+    }
+
+    /* 漫游操作提示 */
+    .roam-hint {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%) translateY(6px);
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: rgba(8, 18, 16, 0.62);
+      border: 1px solid rgba(130, 245, 200, 0.28);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.35),
+        0 0 18px rgba(60, 220, 160, 0.16);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: rgba(226, 255, 244, 0.9);
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      user-select: none;
+      z-index: 20;
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    }
+    .roam-hint.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 560px) {
+      .floor-panel {
+        top: 14px;
+        right: 14px;
+        width: 168px;
+        padding: 11px;
+        border-radius: 14px;
+      }
+      .floor-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+      .floor-panel__hint { margin-bottom: 10px; }
+      .roam-hint {
+        bottom: 18px;
+        padding: 8px 12px;
+        font-size: 11px;
+        letter-spacing: 0.4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div class="hud">
+    <strong>VILLA · 新中式三层别墅</strong>
+    左键拖拽旋转 · 滚轮缩放 · 右键平移 · 漫游模式 WASD 移动<br />
+    <span>白墙 · 黛瓦双坡顶 · PBR 材质 · 指数雾 · 草叶风场 · 水面涟漪 · 星空 / 萤火虫 · Three.js r169</span>
+  </div>
+
+  <div class="roam-crosshair" id="roam-crosshair" aria-hidden="true"></div>
+  <div class="roam-hint" id="roam-hint" role="status">
+    W A S D 移动 · 鼠标环顾 · Shift 加速 · ESC 退出漫游
+  </div>
+
+  <div class="floor-panel" role="group" aria-label="场景显示控制">
+    <div class="floor-panel__title">楼层分层显示</div>
+    <div class="floor-panel__hint">单独查看一层 · 透视查看室内家具</div>
+    <button class="floor-btn is-active" type="button" data-floor="all" aria-pressed="true">显示全部</button>
+    <button class="floor-btn" type="button" data-floor="1" aria-pressed="false">只看一楼</button>
+    <button class="floor-btn" type="button" data-floor="2" aria-pressed="false">只看二楼</button>
+    <button class="floor-btn" type="button" data-floor="3" aria-pressed="false">只看三楼</button>
+
+    <div class="panel-divider"></div>
+    <div class="floor-panel__title">结构视图</div>
+    <div class="floor-panel__hint">外墙半透明 · 楼板 / 楼梯 / 隔断 / 家具保持实体</div>
+    <button class="floor-btn xray-btn" type="button" id="xray-btn"
+            aria-pressed="false" aria-label="让外墙半透明，查看室内结构">👁️ 透视墙体</button>
+
+    <div class="panel-divider"></div>
+    <div class="floor-panel__title">昼夜光照</div>
+    <button class="floor-btn daynight-btn" type="button" id="daynight-btn"
+            aria-pressed="false" aria-label="当前为白天，切换到夜晚">🌙 切换到夜晚</button>
+
+    <div class="panel-divider"></div>
+    <div class="floor-panel__title">第一人称漫游</div>
+    <div class="floor-panel__hint">视点 1.7m · 鼠标环顾 · WASD 移动</div>
+    <button class="floor-btn roam-btn" type="button" id="roam-btn"
+            aria-pressed="false" aria-label="进入第一人称漫游模式">🚶 漫游模式</button>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+    const canvas = document.getElementById('scene');
+
+    // =====================================================================
+    // 全局视觉配置（一键调参入口）
+    // ---------------------------------------------------------------------
+    // 颜色 / 雾密度 / 曝光 / 灯光强度 / 材质参数 / 粒子特效全部集中在这里。
+    // 下方 DAY / NIGHT 两套预设直接读取 CONFIG，昼夜切换只插值颜色与强度，
+    // 不会再出现“数值散落在 3000 行代码里”的情况。
+    // =====================================================================
+    const CONFIG = {
+      // ---------- 颜色 ----------
+      colors: {
+        day: {
+          background: 0xdde6f0,
+          fog: 0xdde6f0,
+          ground: 0x8d97a4,
+          courtyardGround: 0x6f8a5f,
+          courtyardPath: 0x8a9099,
+          meadow: 0x6d8a5c,
+          river: 0x2f6f8a,
+          riverBank: 0x6b6a52,
+          grassTint: 0xffffff,
+          shrubTint: 0xffffff,
+          stoneTint: 0xffffff,
+          bridgeWood: 0x7a5638,
+          bridgeDark: 0x4d3524,
+          leafTint: 0xffffff,
+          wall: 0xf0f0f0,
+          roof: 0x2a2f4c,        // 深蓝偏灰的黛瓦
+          roofSlab: 0xffffff,    // 坡面靠瓦垄贴图着色，基色保持白
+          trim: 0x2a211c,
+          ambient: 0xd8e4f5,
+          hemiSky: 0xdfe8ff,
+          hemiGround: 0x5a5660,
+          sun: 0xffffff,
+          rim: 0x9fb4ff
+        },
+        night: {
+          background: 0x070f1c,
+          fog: 0x0a0f1c,          // 深夜指数雾：深蓝
+          ground: 0x121924,
+          courtyardGround: 0x2b4236,
+          courtyardPath: 0x4b5563,
+          meadow: 0x26382e,
+          river: 0x0e2534,
+          riverBank: 0x2a2c24,
+          grassTint: 0x9fb6d2,
+          shrubTint: 0x93a9c4,
+          stoneTint: 0x9fb0c4,
+          bridgeWood: 0x6a8098,
+          bridgeDark: 0x37495d,
+          leafTint: 0xa9b9cf,
+          wall: 0xc9d8ea,
+          roof: 0x1e2540,
+          roofSlab: 0xffffff,
+          trim: 0x141d29,
+          ambient: 0x7fa6cf,
+          hemiSky: 0x35577e,
+          hemiGround: 0x0b1220,
+          sun: 0x8fb6ff,
+          rim: 0x5b7fb3
+        },
+        // 材质基础色（与昼夜预设解耦的实体颜色）
+        material: {
+          wall: 0xf0f0f0,
+          roof: 0x2a2f4c,
+          trim: 0x2a211c,
+          glass: 0x16242e,
+          water: 0x2f6f8a,
+          waterEmissive: 0x123a52
+        }
+      },
+
+      // ---------- 雾：指数雾，白天轻薄、夜晚浓郁 ----------
+      fog: {
+        dayDensity: 0.0075,
+        nightDensity: 0.015
+      },
+
+      // ---------- 曝光（ACESFilmic） ----------
+      exposure: {
+        day: 1.2,
+        night: 1.12
+      },
+
+      // ---------- 灯光强度 ----------
+      lights: {
+        ambientDay: 0.65,
+        ambientNight: 0.45,
+        hemiDay: 0.5,
+        hemiNight: 0.5,
+        sunDay: 1.5,
+        sunNight: 0.25,
+        rimDay: 0.45,
+        rimNight: 0.2,
+        windowDay: 0.06,        // 白天窗内一点点暖光，玻璃不至于像一块黑板
+        windowNight: 0.36,
+        interiorDay: [2.6, 2.2, 1.8],   // 白天室内基础暖光：有窗也要有一点层次
+        interiorNight: [1.5, 1.5, 0.9],
+        interiorCutaway: 4.0,
+        environmentDay: 0.55,
+        environmentNight: 0.12
+      },
+
+      // ---------- 材质参数 ----------
+      materials: {
+        wallRoughness: 0.9,          // 墙面微弱粗糙度，告别塑料反光
+        roofRoughness: 0.58,
+        roofMetalness: 0.3,          // 瓦面微弱高光
+        roofEnvMapIntensity: 0.75,
+        glassOpacity: 0.6,
+        glassNightOpacity: 0.6,
+        glassRoughness: 0.1,
+        glassMetalness: 0.8,
+        glassEnvMapIntensity: 0.5,
+        glassEmissiveDay: 0,
+        glassEmissiveNight: 1.4,
+        waterRoughness: 0.68,
+        waterMetalness: 0.0,
+        waterOpacity: 0.94,
+        waterEnvMapIntensity: 0.35,
+        waterBumpScale: 0.2
+      },
+
+      // ---------- 草地风场（顶点着色器） ----------
+      grass: {
+        windStrength: 0.22,
+        windSpeed: 1.15
+      },
+
+      // ---------- 水面动态（UV 漂移 + bump / 透明度呼吸） ----------
+      water: {
+        uvDriftSpeed: 0.02,
+        uvSwaySpeed: 0.55,
+        uvSwayAmount: 0.012,
+        bumpBreathSpeed: 0.9,
+        bumpBreathAmp: 0.03,
+        opacityBreathSpeed: 0.7,
+        opacityBreathAmp: 0.025
+      },
+
+      // ---------- 星空 ----------
+      stars: {
+        size: 1.7,                   // 比旧版 3.2 更细碎
+        brightnessMin: 0.45,
+        brightnessMax: 1.0,
+        twinkleSpeedMin: 0.6,
+        twinkleSpeedMax: 2.2,
+        twinkleDepth: 0.4,
+        // 微蓝 / 微黄 / 冷白 / 暖白四种星色
+        palette: [
+          [0.62, 0.78, 1.0],
+          [1.0, 0.9, 0.68],
+          [0.78, 0.88, 1.0],
+          [1.0, 0.98, 0.86]
+        ]
+      },
+
+      // ---------- 萤火虫 ----------
+      fireflies: {
+        flickerMin: 1.2,
+        flickerMax: 2.8,
+        lightCount: 2,               // 只挂 2 盏微光，避免 PointLight 拖垮帧率
+        lightIntensity: 1.8,
+        lightDistance: 3.4,
+        lightColor: 0xffd27a
+      },
+
+      // ---------- 水面涟漪 ----------
+      ripples: {
+        count: 9,
+        speedMin: 0.12,
+        speedMax: 0.24,
+        sizeMin: 2.2,
+        sizeMax: 3.8,
+        opacity: 0.17,
+        nightBoost: 0.35            // 夜里涟漪更明显一点
+      },
+
+      // ---------- 结构透视（只让外墙变半透明） ----------
+      xray: {
+        wallOpacity: 0.18,      // 外墙透明度：既能看清室内，又保留墙体轮廓
+        glassOpacity: 0.12,     // 透视时玻璃进一步变淡，避免深色玻璃挡住视线
+        interiorLight: 3.2      // 透视时室内暖光下限
+      },
+
+      // ---------- 阴影 ----------
+      shadows: {
+        mapSize: 2048,
+        radius: 4
+      },
+
+      // ---------- 实例数量（性能调优） ----------
+      counts: {
+        grass: 4800,           // 掉帧时优先调小：4800 → 3600 → 2400
+        grassClumpSize: 10,
+        fallingLeaves: 50,
+        shrubs: 60,
+        stones: 80,
+        forestTrees: 200,
+        forestRange: 40,
+        stars: 1100,
+        fireflies: 60
+      },
+
+      // ---------- 生活化细节（红灯笼 / 石桌 / 竹林 / 乌篷船 / 芦苇 / 孔明灯） ----------
+      // 这些物件只做氛围，不参与阴影投射；颜色集中放在这里，方便统一调整中式色调。
+      life: {
+        lanternRed: 0xff1408,
+        lanternGold: 0xc9a24a,
+        lanternTassel: 0x8e1b12,
+        stone: 0x707779,
+        stoneDark: 0x565d60,
+        bambooCulm: 0x5f8f43,
+        bambooNode: 0x446b30,
+        bambooLeaf: 0x6fa84f,
+        reedStem: 0x9aa66a,
+        reedHead: 0xa97b4b,
+        boatHull: 0x40342a,
+        boatCanopy: 0x2b2723,
+        boatTrim: 0x6b5138,
+        skyLanternPaper: 0xffb757,
+        skyLanternFlame: 0xffe0a0
+      },
+
+      // 数量同样收进 CONFIG：掉帧时优先减少芦苇 / 竹林，再减少孔明灯
+      lifeCounts: {
+        reeds: 52,
+        bamboo: 20,
+        skyLanterns: 14
+      }
+    };
+
+    // 把 0xRRGGBB 转成 canvas 可用的 CSS 颜色
+    function colorToCss(hex) {
+      return '#' + hex.toString(16).padStart(6, '0');
+    }
+
+    // ================= 场景密度 / 布局参数（性能调优入口） =================
+    // 草：全部由单个 InstancedMesh 绘制，GPU 只有 1 个 draw call。
+    // 现在按“10 根一丛”成簇生长，数量比旧版更密；掉帧时优先调小：4800 → 3600 → 2400。
+    const GRASS_COUNT = CONFIG.counts.grass;
+    // 每丛聚集的草叶实例数（不是几何叶片数）：10 个实例 × 6 片叶 ≈ 一簇 60 片叶
+    const GRASS_CLUMP_SIZE = CONFIG.counts.grassClumpSize;
+    const GRASS_CLUMP_RADIUS = 0.42;
+    // 落叶 / 花瓣密度：50 片小面片，缓慢旋转飘落，落出视野后回到天空
+    const FALLING_LEAF_COUNT = CONFIG.counts.fallingLeaves;
+    // 灌木 / 石头同样是实例化渲染，数量很小，一般不需要动
+    const SHRUB_COUNT = CONFIG.counts.shrubs;
+    const STONE_COUNT = CONFIG.counts.stones;
+
+    // 河流与木桥布局：河流沿 X 轴横穿庭院前方的草地，木桥在 x = 0 处过河
+    const RIVER_CENTER_Z = 20.5;
+    const RIVER_HALF_WIDTH = 3.4;   // 水面 z ∈ [17.1, 23.9]
+    const RIVER_HALF_LENGTH = 45;   // 水面总长 90m，雾里自然消失
+    const BRIDGE_HALF_WIDTH = 1.3;
+    const BRIDGE_START_Z = 16.1;
+    const BRIDGE_END_Z = 24.9;
+
+    // ---------- 渲染器 ----------
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    // 后期泛光需要多张小尺寸 RT，像素比上限收紧到 1.5，兼顾清晰度与帧率
+    const RENDER_PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, 1.5);
+    renderer.setPixelRatio(RENDER_PIXEL_RATIO);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    // PCFSoft 会忽略 shadow.radius；改用 PCF + CONFIG.shadows.radius 才能调出柔和树影
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = CONFIG.exposure.day; // 1.2：色彩更通透，白墙不过曝
+
+    // 性能调试：关闭 info 自动重置，改由渲染循环手动 reset，
+    // 这样 __villaDebug 读到的是整帧（含泛光 / 阴影 pass）真实 draw call 总数，而不是最后一个全屏 pass。
+    renderer.info.autoReset = false;
+    let frameTimeMs = 16.7; // 帧时间指数滑动平均（毫秒）
+
+    // ---------- CSS2D 标签渲染器（3D 空间中的 HTML 标签） ----------
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.domElement.className = 'label-layer';
+    document.body.appendChild(labelRenderer.domElement);
+
+    // ---------- 场景（指数雾：白天轻薄，夜晚浓成深蓝夜色） ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(CONFIG.colors.day.background);
+    // 统一使用 FogExp2：昼夜只插值颜色与密度，避免切换雾类型时出现跳变。
+    // 夜晚密度 0.015 会让远处的树、河面与森林迅速隐入深蓝，纵深感更强。
+    scene.fog = new THREE.FogExp2(CONFIG.colors.day.fog, CONFIG.fog.dayDensity);
+
+    // ---------- 环境贴图（IBL）：让 PBR 材质拥有真实反射 ----------
+    // PMREM 会把等距柱状 HDR 预滤波成 mip 链，金属 / 玻璃 / 石材的反射才不会糊成一片。
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+
+    // jsDelivr 直连 three.js 官方示例 HDR（1k），首次打开需要联网
+    const ENV_HDR_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r169/examples/textures/equirectangular/royal_esplanade_1k.hdr';
+
+    // 断网 / CDN 失败时的兜底：程序化天空 + 地面渐变，仍然给材质柔和的环境光
+    function createProceduralEnvironmentTexture() {
+      const cv = document.createElement('canvas');
+      cv.width = 1024;
+      cv.height = 512;
+      const ctx = cv.getContext('2d');
+
+      const sky = ctx.createLinearGradient(0, 0, 0, cv.height);
+      sky.addColorStop(0.0, '#7fa8d8');
+      sky.addColorStop(0.42, '#cddff2');
+      sky.addColorStop(0.5, '#eef2f2');
+      sky.addColorStop(0.52, '#6d7a68');
+      sky.addColorStop(1.0, '#2f382e');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, cv.width, cv.height);
+
+      const sun = ctx.createRadialGradient(
+        cv.width * 0.7, cv.height * 0.28, 0,
+        cv.width * 0.7, cv.height * 0.28, 170
+      );
+      sun.addColorStop(0, 'rgba(255, 250, 235, 1)');
+      sun.addColorStop(0.22, 'rgba(255, 244, 214, 0.8)');
+      sun.addColorStop(1, 'rgba(255, 240, 210, 0)');
+      ctx.fillStyle = sun;
+      ctx.fillRect(0, 0, cv.width, cv.height);
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function applyEnvironmentMap(sourceTexture) {
+      sourceTexture.mapping = THREE.EquirectangularReflectionMapping;
+      const envTarget = pmremGenerator.fromEquirectangular(sourceTexture);
+      scene.environment = envTarget.texture; // 只参与环境光 / 反射，不覆盖背景与雾
+      scene.environmentIntensity = CONFIG.lights.environmentDay;
+      sourceTexture.dispose(); // PMREM 纹理已独立，源贴图可以释放
+    }
+
+    new RGBELoader().load(
+      ENV_HDR_URL,
+      (hdrTexture) => {
+        applyEnvironmentMap(hdrTexture);
+        console.info('[villa] HDR 环境贴图已加载');
+      },
+      undefined,
+      (error) => {
+        console.warn('[villa] HDR 环境贴图加载失败，使用程序化天空兜底', error);
+        applyEnvironmentMap(createProceduralEnvironmentTexture());
+      }
+    );
+
+    // ---------- 相机 ----------
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      500
+    );
+    camera.position.set(11, 10.5, 32);
+
+    // ---------- 后期处理：克制的夜间泛光 ----------
+    // 只让暖窗、萤火虫与星点溢出柔光；白天 strength 为 0，避免白墙被糊掉。
+    const BLOOM_STRENGTH = 0.32; // 夜间目标强度（0.25~0.35，克制）
+    const BLOOM_RADIUS = 0.36;   // 柔而不散
+    // 只让亮度接近纯白的窗户 / 萤火虫溢出柔光；水面、玻璃、瓦面的高光都被挡在阈值以下
+    const BLOOM_THRESHOLD = 0.78;
+    const composer = new EffectComposer(renderer);
+    composer.renderTarget1.samples = 2; // 低倍 MSAA，保留屋檐 / 窗框边缘
+    composer.renderTarget2.samples = 2;
+    composer.addPass(new RenderPass(scene, camera));
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      BLOOM_STRENGTH,
+      BLOOM_RADIUS,
+      BLOOM_THRESHOLD
+    );
+    bloomPass.strength = 0; // 白天关闭
+    composer.addPass(bloomPass);
+
+    // OutputPass 负责整条链路的最终 ACES 色调映射 + sRGB 输出，
+    // 必须放在 composer 的最后一位，否则泛光 / 中间缓冲会再次被错误编码，画面发灰。
+    composer.addPass(new OutputPass());
+
+    // ---------- 轨道控制器 ----------
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1.8, 12);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.rotateSpeed = 0.75;
+    controls.zoomSpeed = 0.9;
+    controls.panSpeed = 0.6;
+    controls.minDistance = 5;
+    controls.maxDistance = 70;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04; // 不钻到地面以下
+    controls.update();
+
+    // ---------- 第一人称漫游控制器（默认关闭，由右侧「漫游模式」按钮启用） ----------
+    // 指针锁定后鼠标直接控制相机朝向，鼠标不再交给 OrbitControls
+    const fpControls = new PointerLockControls(camera, renderer.domElement);
+    fpControls.enabled = false;
+    fpControls.pointerSpeed = 0.9;
+    fpControls.minPolarAngle = 0.12;              // 限制抬头角度
+    fpControls.maxPolarAngle = Math.PI - 0.12;    // 限制低头角度
+
+    // ---------- 灯光（初始为白天参数，昼夜切换时平滑插值） ----------
+    const ambient = new THREE.AmbientLight(CONFIG.colors.day.ambient, CONFIG.lights.ambientDay);
+    scene.add(ambient);
+
+    const hemi = new THREE.HemisphereLight(
+      CONFIG.colors.day.hemiSky,
+      CONFIG.colors.day.hemiGround,
+      CONFIG.lights.hemiDay
+    );
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(CONFIG.colors.day.sun, CONFIG.lights.sunDay);
+    sun.position.set(14, 20, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(CONFIG.shadows.mapSize, CONFIG.shadows.mapSize);
+    sun.shadow.radius = CONFIG.shadows.radius; // PCF 下按纹素扩散，形成柔和边缘
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 95;
+    // 阴影范围要盖住整个庭院草坪 + 河流两岸 + 木桥，
+    // 否则河对岸的石头 / 桥体收不到树影，会像贴上去的一样浮空。
+    sun.shadow.camera.left = -32;
+    sun.shadow.camera.right = 32;
+    sun.shadow.camera.top = 32;
+    sun.shadow.camera.bottom = -32;
+    sun.shadow.camera.updateProjectionMatrix();
+    sun.shadow.bias = -0.0008;
+    sun.shadow.normalBias = 0.02;
+    scene.add(sun);
+
+    // 背光补光，让暗面也有层次
+    const rim = new THREE.DirectionalLight(CONFIG.colors.day.rim, CONFIG.lights.rimDay);
+    rim.position.set(-12, 8, -14);
+    scene.add(rim);
+
+    // ---------- 地面（只用于承接投影，不是家具） ----------
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(140, 140),
+      new THREE.MeshStandardMaterial({
+        color: 0x24242a,
+        roughness: 1,
+        metalness: 0
+      })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // ================= 新中式外立面 =================
+    // ---------- 材质 ----------
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.material.wall, // 白墙
+      roughness: CONFIG.materials.wallRoughness, // 0.9：保留一点粗糙的乳胶漆质感
+      metalness: 0.0,
+      side: THREE.DoubleSide, // 墙体是中空壳，室内一侧也要可见
+      transparent: false, // 透视 / 剖切时由 applyWallAppearance() 打开
+      opacity: 1
+    });
+
+    const roofMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.material.roof, // 深蓝偏灰的黛瓦
+      roughness: CONFIG.materials.roofRoughness, // 轻微光泽，但不再是镜面
+      metalness: CONFIG.materials.roofMetalness, // 0.3：只在坡面留下很弱的一条高光
+      envMapIntensity: CONFIG.materials.roofEnvMapIntensity
+    });
+
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.material.trim, // 深木色装饰线条
+      roughness: 0.68,
+      metalness: 0.06
+    });
+
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.material.glass, // 深色玻璃
+      emissive: 0xffc06a, // 夜间窗内暖黄灯光（白天强度为 0）
+      emissiveIntensity: 0,
+      roughness: CONFIG.materials.glassRoughness,   // 0.1：清晰的环境反射
+      metalness: CONFIG.materials.glassMetalness,   // 0.8：像真玻璃而不是自发光实体墙
+      envMapIntensity: CONFIG.materials.glassEnvMapIntensity,
+      transparent: true,
+      opacity: CONFIG.materials.glassOpacity,       // 0.6：能透出室内家具轮廓
+      side: THREE.DoubleSide
+    });
+
+    // 昼夜切换时需要统一调整的材质 / 灯光引用
+    const roofSlabMats = [];
+    const windowLights = [];
+
+    // 单层剖切时把该层屋顶所有构件（瓦面 / 山墙封板 / 屋脊 / 檐口 / 博风板）
+    // 统一换成这个透明材质，俯视时才不会挡住室内
+    const ghostRoofMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.material.roof,
+      roughness: 0.8,
+      transparent: true,
+      opacity: 0.05,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    // 黛瓦瓦垄贴图：沿坡面方向的明暗条纹，模拟一片片瓦
+    function createTileTexture() {
+      const size = 64;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = colorToCss(CONFIG.colors.material.roof);
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+      ctx.fillRect(2, 0, 7, size);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.24)';
+      ctx.fillRect(12, 0, 5, size);
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      return tex;
+    }
+    const tileTexture = createTileTexture();
+
+    const villa = new THREE.Group();
+    villa.name = 'villa';
+
+    const BASE_Y = 0.28; // 台基高度
+
+    // ---------- 构件工具：RoundedBoxGeometry 圆角几何体 ----------
+    // 半径 0.05m、分段 2：建筑边缘获得柔和的倒角高光，不再有廉价的直角。
+    // 细小构件（窗棂 / 压条）会被 RoundedBoxGeometry 自动夹到最小边长的一半，
+    // 不会因为圆角过大而破面；相同尺寸的几何体走缓存，避免重复分配显存。
+    const ROUNDED_RADIUS = 0.05;
+    const ROUNDED_SEGMENTS = 2;
+    const roundedBoxGeoCache = new Map();
+
+    function getRoundedBoxGeometry(w, h, d, radius = ROUNDED_RADIUS) {
+      const r = Math.max(0.0001, Math.min(radius, w / 2, h / 2, d / 2));
+      const key = w.toFixed(3) + ':' + h.toFixed(3) + ':' + d.toFixed(3) + ':' + r.toFixed(4);
+      let geo = roundedBoxGeoCache.get(key);
+      if (!geo) {
+        geo = new RoundedBoxGeometry(w, h, d, ROUNDED_SEGMENTS, r);
+        roundedBoxGeoCache.set(key, geo);
+      }
+      return geo;
+    }
+
+    function addBox(parent, size, position, material, radius = ROUNDED_RADIUS) {
+      const mesh = new THREE.Mesh(
+        getRoundedBoxGeometry(size[0], size[1], size[2], radius),
+        material
+      );
+      mesh.position.set(position[0], position[1], position[2]);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ---------- 室内极简家具材质 ----------
+    const sofaMat = new THREE.MeshStandardMaterial({
+      color: 0x4a4d55, roughness: 0.92, metalness: 0.02
+    });
+    const sofaCushionMat = new THREE.MeshStandardMaterial({
+      color: 0x606570, roughness: 0.95
+    });
+    const throwMat = new THREE.MeshStandardMaterial({
+      color: 0xc7ccd3, roughness: 0.98
+    });
+    const coffeeTableMat = new THREE.MeshStandardMaterial({
+      color: 0xb99a72, roughness: 0.7, metalness: 0.04
+    });
+    const tvScreenMat = new THREE.MeshStandardMaterial({
+      color: 0x03050a, roughness: 0.22, metalness: 0.55,
+      emissive: 0x10202e, emissiveIntensity: 0.8
+    });
+    const tvStandMat = new THREE.MeshStandardMaterial({
+      color: 0x23252b, roughness: 0.72, metalness: 0.12
+    });
+    const bedMat = new THREE.MeshStandardMaterial({
+      color: 0xe9e3d7, roughness: 0.88
+    });
+    const bedFrameMat = new THREE.MeshStandardMaterial({
+      color: 0xcfc5b4, roughness: 0.82
+    });
+    const pillowMat = new THREE.MeshStandardMaterial({
+      color: 0xf7f3ea, roughness: 0.95
+    });
+    const deskMat = new THREE.MeshStandardMaterial({
+      color: 0x8d6a4b, roughness: 0.72, metalness: 0.04
+    });
+    const deskLegMat = new THREE.MeshStandardMaterial({
+      color: 0x3a2f27, roughness: 0.75
+    });
+    const interiorFloorMat = new THREE.MeshStandardMaterial({
+      color: 0x9d9487, roughness: 0.95
+    });
+    const rugMat = new THREE.MeshStandardMaterial({
+      color: 0x7d8794, roughness: 1
+    });
+    // ---------- 结构 / 室内新增材质 ----------
+    const interiorWallMat = new THREE.MeshStandardMaterial({
+      color: 0xe8dfd1, roughness: 0.94, side: THREE.DoubleSide
+    });
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      color: 0xdcd4c6, roughness: 0.96, side: THREE.DoubleSide
+    });
+    const stairMat = new THREE.MeshStandardMaterial({
+      color: 0x9c7b55, roughness: 0.74, metalness: 0.03
+    });
+    const stairRailMat = new THREE.MeshStandardMaterial({
+      color: 0x3a2d24, roughness: 0.58, metalness: 0.18
+    });
+    const doorMat = new THREE.MeshStandardMaterial({
+      color: 0x5c3f2a, roughness: 0.62, metalness: 0.04
+    });
+    const lampGlowMat = new THREE.MeshBasicMaterial({ color: 0xffd8a0 });
+    const stoneStepMat = new THREE.MeshStandardMaterial({
+      color: 0x8a9099, roughness: 0.95, metalness: 0.02
+    });
+    const porcelainMat = new THREE.MeshStandardMaterial({
+      color: 0xf4f6f5, roughness: 0.35, metalness: 0.02
+    });
+    const bathTileMat = new THREE.MeshStandardMaterial({
+      color: 0xbfc7c9, roughness: 0.6, metalness: 0.04
+    });
+    const showerGlassMat = new THREE.MeshStandardMaterial({
+      color: 0xbcd6d8,
+      roughness: 0.2,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.26,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    // 用 CSS2DObject 创建始终面向相机的空间文字标签
+    function createRoomLabel(text, position) {
+      const el = document.createElement('div');
+      el.className = 'room-label';
+      el.textContent = text;
+      const label = new CSS2DObject(el);
+      label.position.set(position[0], position[1], position[2]);
+      return label;
+    }
+
+    // 一楼客厅：深灰沙发 + 黑色电视屏幕
+    function addLivingRoom(parent, floorY) {
+      addBox(parent, [2.9, 0.02, 2.8], [0, floorY + 0.075, 0.2], rugMat);
+
+      // 沙发：坐面 / 靠背 / 扶手 / 坐垫 / 沙发腿
+      addBox(parent, [2.7, 0.26, 1.0], [0, floorY + 0.33, 0.95], sofaMat);
+      addBox(parent, [2.7, 0.62, 0.22], [0, floorY + 0.77, 1.49], sofaMat);
+      for (const sx of [-1, 1]) {
+        addBox(parent, [0.24, 0.44, 1.0], [sx * 1.23, floorY + 0.68, 0.95], sofaMat);
+        addBox(parent, [1.12, 0.16, 0.86], [sx * 0.58, floorY + 0.54, 0.93], sofaCushionMat);
+        for (const sz of [-1, 1]) {
+          addBox(parent, [0.1, 0.14, 0.1], [sx * 1.13, floorY + 0.13, 0.95 + sz * 0.38], deskLegMat);
+        }
+      }
+      // 搭在沙发背面的浅色盖毯，增强深灰沙发的轮廓
+      addBox(parent, [1.45, 0.6, 0.04], [0, floorY + 0.8, 1.61], throwMat);
+
+      // 极简茶几（浅木色台面）
+      addBox(parent, [1.7, 0.08, 0.85], [0, floorY + 0.46, -1.0], coffeeTableMat);
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          addBox(parent, [0.08, 0.4, 0.08], [sx * 0.7, floorY + 0.26, -1.0 + sz * 0.3], deskLegMat);
+        }
+      }
+      addBox(parent, [0.42, 0.04, 0.3], [0.28, floorY + 0.52, -1.0], pillowMat);
+
+      // 电视柜 + 深灰边框 + 黑色电视屏幕
+      addBox(parent, [2.7, 0.32, 0.42], [0, floorY + 0.22, -3.28], tvStandMat);
+      addBox(parent, [2.5, 1.18, 0.06], [0, floorY + 1.045, -3.4], tvStandMat);
+      addBox(parent, [2.35, 1.05, 0.07], [0, floorY + 1.045, -3.36], tvScreenMat);
+    }
+
+    // 二楼卧室：浅色床 + 床头板 + 枕头
+    function addBedroom(parent, floorY) {
+      addBox(parent, [2.15, 0.22, 2.75], [0, floorY + 0.17, -0.9], bedFrameMat);
+      addBox(parent, [2.0, 0.34, 2.6], [0, floorY + 0.45, -0.9], bedMat);
+      addBox(parent, [2.25, 1.0, 0.14], [0, floorY + 0.56, -2.35], bedFrameMat);
+
+      for (const sx of [-1, 1]) {
+        addBox(parent, [0.72, 0.16, 0.42], [sx * 0.5, floorY + 0.69, -1.8], pillowMat);
+      }
+      addBox(parent, [2.02, 0.06, 0.7], [0, floorY + 0.65, 0.2], sofaCushionMat);
+    }
+
+    // 三楼书房/露台：长条书桌 + 极简座椅 + 桌上书本
+    function addStudy(parent, floorY) {
+      // 桌面 + 两侧支腿
+      addBox(parent, [2.3, 0.14, 0.72], [0, floorY + 0.82, -1.0], deskMat);
+      for (const sx of [-1, 1]) {
+        addBox(parent, [0.12, 0.72, 0.62], [sx * 1.02, floorY + 0.42, -1.0], deskLegMat);
+      }
+      addBox(parent, [0.52, 0.045, 0.36], [0.38, floorY + 0.915, -1.0], pillowMat);
+
+      // 座椅：坐面 / 靠背 / 四腿
+      addBox(parent, [0.58, 0.08, 0.58], [0, floorY + 0.52, -0.05], deskMat);
+      addBox(parent, [0.58, 0.5, 0.07], [0, floorY + 0.79, 0.21], deskMat);
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          addBox(parent, [0.06, 0.46, 0.06], [sx * 0.23, floorY + 0.29, -0.05 + sz * 0.23], deskLegMat);
+        }
+      }
+    }
+
+    // 一楼卫生间：马桶 + 洗手台 + 镜子（藏在客厅西北角隔断后）
+    function addBathroom1(parent, floorY) {
+      const base = floorY + 0.06;
+      addBox(parent, [1.26, 0.02, 3.2], [-2.795, floorY + 0.07, -1.82], bathTileMat);
+
+      // 马桶：水箱靠西墙
+      addBox(parent, [0.44, 0.36, 0.56], [-2.94, base + 0.18, -2.72], porcelainMat);
+      addBox(parent, [0.2, 0.56, 0.48], [-3.32, base + 0.28, -2.72], porcelainMat);
+      addBox(parent, [0.48, 0.05, 0.52], [-2.94, base + 0.39, -2.72], porcelainMat);
+
+      // 洗手台
+      addBox(parent, [0.42, 0.6, 0.86], [-3.2, base + 0.3, -1.05], deskMat);
+      addBox(parent, [0.52, 0.08, 0.96], [-3.17, base + 0.64, -1.05], porcelainMat);
+      addBox(parent, [0.34, 0.1, 0.56], [-3.2, base + 0.73, -1.05], porcelainMat);
+
+      // 镜子 + 毛巾杆
+      addBox(parent, [0.04, 0.72, 0.72], [-3.41, base + 1.5, -1.05], showerGlassMat);
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.62, 8), trimMat);
+      bar.rotation.x = Math.PI / 2;
+      bar.position.set(-3.36, base + 1.12, -0.52);
+      bar.castShadow = true;
+      parent.add(bar);
+    }
+
+    // 二楼卫生间：小尺度马桶 + 洗手台
+    function addBathroom2(parent, floorY) {
+      const base = floorY + 0.06;
+      addBox(parent, [1.26, 0.02, 1.36], [-1.895, floorY + 0.07, 1.845], bathTileMat);
+
+      // 马桶：水箱靠东侧隔墙
+      addBox(parent, [0.44, 0.36, 0.52], [-1.78, base + 0.18, 2.12], porcelainMat);
+      addBox(parent, [0.2, 0.54, 0.46], [-1.38, base + 0.27, 2.12], porcelainMat);
+      addBox(parent, [0.48, 0.05, 0.5], [-1.78, base + 0.39, 2.12], porcelainMat);
+
+      // 洗手台：靠西墙
+      addBox(parent, [0.4, 0.58, 0.78], [-2.3, base + 0.29, 2.08], deskMat);
+      addBox(parent, [0.5, 0.08, 0.88], [-2.28, base + 0.62, 2.08], porcelainMat);
+      addBox(parent, [0.32, 0.1, 0.52], [-2.3, base + 0.71, 2.08], porcelainMat);
+
+      addBox(parent, [0.04, 0.68, 0.66], [-2.52, base + 1.45, 2.08], showerGlassMat);
+    }
+
+    // 三楼衣帽间：开放柜体 + 挂衣杆 + 叠放衣物
+    function addCloset3(parent, floorY) {
+      const base = floorY + 0.06;
+
+      // 背板 / 两侧立板 / 顶板
+      addBox(parent, [0.95, 2.0, 0.04], [-1.12, base + 1.0, 1.6], deskMat);
+      addBox(parent, [0.04, 2.0, 0.34], [-1.58, base + 1.0, 1.43], deskMat);
+      addBox(parent, [0.04, 2.0, 0.34], [-0.66, base + 1.0, 1.43], deskMat);
+      addBox(parent, [0.95, 0.04, 0.34], [-1.12, base + 1.98, 1.43], trimMat);
+
+      // 三层开放格
+      for (const yy of [0.55, 1.05, 1.55]) {
+        addBox(parent, [0.87, 0.04, 0.3], [-1.12, base + yy, 1.43], pillowMat);
+      }
+
+      // 挂衣杆 + 衣物
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.8, 8), stairRailMat);
+      rod.rotation.z = Math.PI / 2;
+      rod.position.set(-1.12, base + 1.74, 1.36);
+      rod.castShadow = true;
+      parent.add(rod);
+      for (const [cx, cy] of [[-1.4, 1.28], [-1.08, 1.28], [-1.22, 0.76]]) {
+        addBox(parent, [0.28, 0.12, 0.24], [cx, base + cy, 1.43], pillowMat);
+      }
+    }
+
+    const roomBuilders = [addLivingRoom, addBedroom, addStudy];
+    const roomLabelDefs = [
+      { text: '客厅', y: 2.15, z: 0.6 },
+      { text: '卧室', y: 1.75, z: -0.1 },
+      { text: '书房/露台', y: 1.6, z: 0.2 }
+    ];
+    // 次房间的小标签（和主标签一起参与分层显隐）
+    const extraLabelDefs = [
+      [
+        { text: '卫生间', x: -2.8, y: 1.55, z: -1.7 },
+        { text: '楼梯', x: 1.98, y: 1.75, z: 0.5 }
+      ],
+      [{ text: '卫生间', x: -1.9, y: 1.5, z: 1.95 }],
+      [{ text: '衣帽间', x: -1.12, y: 1.4, z: 1.1 }]
+    ];
+
+    // 双坡屋顶：屋脊沿 X 轴，两片坡面朝向 ±Z
+    // hole 给上层体块让出洞口：{ w, d }，否则上层墙体会直接穿过坡屋面
+    const roofSlabMatCache = new Map();
+    function getRoofSlabMaterial(pieceW) {
+      const repeats = Math.max(2, Math.round(pieceW / 0.55));
+      let mat = roofSlabMatCache.get(repeats);
+      if (!mat) {
+        mat = roofMat.clone();
+        mat.color.set(0xffffff); // 贴图已带黛青色，基色设为白避免相乘变黑
+        mat.map = tileTexture.clone();
+        mat.map.repeat.set(repeats, 1);
+        mat.map.needsUpdate = true;
+        roofSlabMats.push(mat);
+        roofSlabMatCache.set(repeats, mat);
+      }
+      return mat;
+    }
+
+    function addGableRoof(parent, width, depth, eaveY, rise, overhang, hole = null) {
+      const roofW = width + overhang * 2;
+      const roofD = depth + overhang * 2;
+      const halfD = roofD / 2;
+      const angle = Math.atan2(rise, halfD);
+      const slopeLen = Math.hypot(halfD, rise);
+      const thickness = 0.16;
+      const lift = thickness / 2 / Math.cos(angle);
+      const tan = Math.tan(angle);
+
+      const holeW = hole ? Math.min(hole.w + 0.04, roofW - 0.2) : 0;
+      const holeD = hole ? Math.min(hole.d + 0.04, roofD - 0.2) : 0;
+      const holeHalfW = holeW / 2;
+      const holeHalfD = holeD / 2;
+
+      // 屋顶所有构件都打上标记：切到某一层时统一换成半透明材质，
+      // 否则山墙封板 / 屋脊 / 檐口仍然实体，会从上方挡住室内
+      const markRoofPart = (mesh) => {
+        mesh.userData.isRoofPanel = true;
+        mesh.userData.roofMaterial = mesh.material;
+        return mesh;
+      };
+
+      // 按平面矩形拼出一块坡面板：内部会自动算出这段坡长与中心高度
+      function addRoofPiece(xMin, xMax, zA, zB) {
+        const pieceW = xMax - xMin;
+        const pieceD = Math.abs(zB - zA);
+        if (pieceW < 0.02 || pieceD < 0.02) return;
+        const centerZ = (zA + zB) / 2;
+        const len = pieceD / Math.cos(angle);
+        const slab = addBox(
+          parent,
+          [pieceW, thickness, len],
+          [(xMin + xMax) / 2, eaveY + (halfD - Math.abs(centerZ)) * tan + lift, centerZ],
+          getRoofSlabMaterial(pieceW)
+        );
+        slab.rotation.x = Math.sign(centerZ) * angle;
+        markRoofPart(slab);
+      }
+
+      for (const dir of [1, -1]) {
+        if (holeW > 0 && holeD > 0) {
+          const zEave = dir * halfD;
+          const zHole = dir * holeHalfD;
+          // 洞口两侧的通长坡面
+          addRoofPiece(-roofW / 2, -holeHalfW, 0, zEave);
+          addRoofPiece(holeHalfW, roofW / 2, 0, zEave);
+          // 洞口到檐口之间的一段
+          addRoofPiece(-holeHalfW, holeHalfW, zHole, zEave);
+        } else {
+          addRoofPiece(-roofW / 2, roofW / 2, 0, dir * halfD);
+        }
+      }
+
+      // 两端三角形山墙封板
+      const shape = new THREE.Shape();
+      shape.moveTo(-halfD, 0);
+      shape.lineTo(halfD, 0);
+      shape.lineTo(0, rise);
+      shape.closePath();
+      const capGeo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.12,
+        bevelEnabled: false
+      });
+      capGeo.rotateY(Math.PI / 2);
+
+      for (const dir of [1, -1]) {
+        const cap = new THREE.Mesh(capGeo, roofMat);
+        cap.position.set(dir === 1 ? roofW / 2 - 0.12 : -roofW / 2, eaveY, 0);
+        cap.castShadow = true;
+        cap.receiveShadow = true;
+        parent.add(cap);
+        markRoofPart(cap);
+      }
+
+      // 屋脊压顶：有洞口时断开，让上层体块从中间升起
+      if (holeW > 0.01 && holeD > 0.01) {
+        const seg = (roofW - holeW) / 2;
+        for (const sx of [-1, 1]) {
+          markRoofPart(addBox(
+            parent,
+            [seg, 0.2, 0.34],
+            [sx * (holeHalfW + seg / 2), eaveY + rise + 0.06, 0],
+            roofMat
+          ));
+        }
+      } else {
+        markRoofPart(addBox(parent, [roofW, 0.2, 0.34], [0, eaveY + rise + 0.06, 0], roofMat));
+      }
+
+      // 檐口木线（屋檐下方的深色收边）
+      for (const dir of [1, -1]) {
+        markRoofPart(addBox(
+          parent,
+          [roofW, 0.14, 0.18],
+          [0, eaveY - 0.07, dir * (halfD - 0.06)],
+          trimMat
+        ));
+      }
+
+      // 博风板：沿两坡斜边的深色收边，略外挑避免与山墙共面
+      for (const sx of [1, -1]) {
+        for (const dir of [1, -1]) {
+          const barge = markRoofPart(addBox(
+            parent,
+            [0.14, 0.2, slopeLen],
+            [sx * (roofW / 2 - 0.04), eaveY + rise / 2 + 0.06, (dir * halfD) / 2],
+            trimMat
+          ));
+          barge.rotation.x = dir * angle;
+        }
+      }
+    }
+
+    // ---------- 三层体块 + 黛瓦屋顶 + 线脚 + 落地窗 ----------
+    const tiers = [
+      {
+        w: 7.2, d: 7.2, h: 2.8, rise: 1.3, overhang: 0.7,
+        windows: [{ x: -1.85, w: 2.2 }, { x: 1.85, w: 2.2 }]
+      },
+      {
+        w: 5.4, d: 5.4, h: 2.55, rise: 1.15, overhang: 0.65,
+        windows: [{ x: -1.3, w: 1.8 }, { x: 1.3, w: 1.8 }]
+      },
+      {
+        w: 3.6, d: 3.6, h: 2.3, rise: 1.45, overhang: 0.65,
+        windows: [{ x: 0, w: 2.0 }]
+      }
+    ];
+
+    const floorGroups = []; // 每层一个 Group，供分层显示切换
+    const floorWallMeshes = []; // 所有外墙板，用于单层查看的剖切阴影控制
+    const outerWallMeshes = []; // 仅外墙板：透视模式只改这些
+    const wallPanelsByFloor = [[], [], []];
+    const interiorWallMeshes = []; // 室内隔断（透视时保持实体）
+    const stairStepMeshes = []; // 踏步
+    const stairRailMeshes = []; // 楼梯扶手 / 栏杆
+    const ceilingSlabs = []; // 每层楼板（剖切时隐藏当前层顶板）
+    const floorLabels = []; // 每层的 CSS2D 空间标签
+    const extraFloorLabels = [[], [], []]; // 次房间标签
+    const interiorLights = []; // 单层查看时点亮室内
+    const interiorNightIntensity = CONFIG.lights.interiorNight; // 夜间一楼 / 二楼常亮，三楼略弱
+    const interiorDayIntensity = CONFIG.lights.interiorDay;
+
+    // ---------- 结构参数 ----------
+    const WALL_T = 0.16; // 外墙厚度
+    const CEIL_T = 0.12; // 楼板厚度
+    // 一楼到二楼的直跑楼梯：贴东墙，底部在南侧，顶部朝北
+    const STAIR = {
+      xMin: 1.5,
+      xMax: 2.45,
+      zBottom: 2.6,
+      zTop: -1.7,
+      baseY: BASE_Y + 0.06,             // 0.34
+      topY: BASE_Y + tiers[0].h + 0.06, // 3.14
+      steps: 14,
+      // 楼板 / 顶板上的楼梯洞口（比楼梯略宽，留出扶手空间）
+      hole: { minX: 1.32, maxX: 2.52, minZ: -1.7, maxZ: 1.55 }
+    };
+
+    // 外墙板：统一打标签，透视 / 剖切只处理这些网格
+    function addOuterWall(parent, size, position, floorIndex) {
+      const mesh = addBox(parent, size, position, wallMat, 0.03);
+      mesh.userData.isOuterWall = true;
+      mesh.userData.floorIndex = floorIndex;
+      outerWallMeshes.push(mesh);
+      wallPanelsByFloor[floorIndex].push(mesh);
+      floorWallMeshes.push(mesh);
+      return mesh;
+    }
+
+    // 室内隔断：和家具一样保持实体，不参与透视
+    function addInteriorWall(parent, size, position) {
+      const mesh = addBox(parent, size, position, interiorWallMat, 0.02);
+      mesh.userData.isInteriorWall = true;
+      interiorWallMeshes.push(mesh);
+      return mesh;
+    }
+
+    // 楼板 / 地面板：可选矩形洞口，自动拆成四块，避免板面盖住楼梯
+    function addFloorSlab(parent, width, depth, topY, hole, thickness, material, floorIndex) {
+      const y = topY - thickness / 2;
+      const pieces = [];
+      const addPiece = (xMin, xMax, zMin, zMax) => {
+        if (xMax - xMin < 0.02 || zMax - zMin < 0.02) return;
+        const mesh = addBox(
+          parent,
+          [xMax - xMin, thickness, zMax - zMin],
+          [(xMin + xMax) / 2, y, (zMin + zMax) / 2],
+          material,
+          0.02
+        );
+        mesh.userData.floorIndex = floorIndex;
+        if (material === ceilingMat) {
+          mesh.userData.isCeilingSlab = true;
+          ceilingSlabs.push(mesh);
+        }
+        pieces.push(mesh);
+      };
+
+      const halfW = width / 2;
+      const halfD = depth / 2;
+      if (!hole) {
+        addPiece(-halfW, halfW, -halfD, halfD);
+      } else {
+        addPiece(-halfW, hole.minX, -halfD, halfD);
+        addPiece(hole.maxX, halfW, -halfD, halfD);
+        addPiece(hole.minX, hole.maxX, -halfD, hole.minZ);
+        addPiece(hole.minX, hole.maxX, hole.maxZ, halfD);
+      }
+      return pieces;
+    }
+
+    // 一楼直跑楼梯：踏步 + 木扶手 + 立柱
+    function buildStairs(parent) {
+      const width = STAIR.xMax - STAIR.xMin;
+      const xCenter = (STAIR.xMin + STAIR.xMax) / 2;
+      const rise = (STAIR.topY - STAIR.baseY) / STAIR.steps;
+      const run = (STAIR.zBottom - STAIR.zTop) / STAIR.steps;
+
+      for (let i = 0; i < STAIR.steps; i++) {
+        const hgt = (i + 1) * rise;
+        const z = STAIR.zBottom - (i + 0.5) * run;
+        const step = addBox(
+          parent,
+          [width, hgt, run],
+          [xCenter, STAIR.baseY + hgt / 2, z],
+          stairMat,
+          0.015
+        );
+        step.userData.isStairStep = true;
+        stairStepMeshes.push(step);
+      }
+
+      // 扶手中心线：从底端到顶端，沿坡度抬起 0.93m
+      const railX = STAIR.xMin + 0.04;
+      const railLen = Math.hypot(STAIR.zBottom - STAIR.zTop, STAIR.topY - STAIR.baseY);
+      const rail = addBox(
+        parent,
+        [0.05, 0.05, railLen],
+        [railX, (STAIR.baseY + STAIR.topY) / 2 + 0.93, (STAIR.zBottom + STAIR.zTop) / 2],
+        stairRailMat,
+        0.02
+      );
+      rail.rotation.x = Math.atan2(STAIR.topY - STAIR.baseY, STAIR.zBottom - STAIR.zTop);
+      rail.castShadow = true;
+      stairRailMeshes.push(rail);
+
+      // 立柱：每两级一根，落在踏步上
+      for (let i = 0; i < STAIR.steps; i += 2) {
+        const stepTop = STAIR.baseY + (i + 1) * rise;
+        const z = STAIR.zBottom - (i + 0.5) * run;
+        const post = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, 0.92, 8),
+          stairRailMat
+        );
+        post.position.set(railX, stepTop + 0.46, z);
+        post.castShadow = true;
+        post.receiveShadow = true;
+        parent.add(post);
+        stairRailMeshes.push(post);
+      }
+
+      // 起步柱
+      const newel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.05, 1.02, 10),
+        stairRailMat
+      );
+      newel.position.set(railX, STAIR.baseY + 0.51, STAIR.zBottom + 0.06);
+      newel.castShadow = true;
+      newel.receiveShadow = true;
+      parent.add(newel);
+      stairRailMeshes.push(newel);
+    }
+
+    // 二楼楼梯洞口栏杆：西侧 + 南侧，防止从洞口直接掉下去
+    function buildStairwellRailing(parent, floorTopY) {
+      const { minX, maxX, minZ, maxZ } = STAIR.hole;
+      const railY = floorTopY + 0.93;
+      const midY = floorTopY + 0.465;
+
+      const addBar = (size, position) => {
+        const bar = addBox(parent, size, position, stairRailMat, 0.02);
+        bar.castShadow = true;
+        stairRailMeshes.push(bar);
+      };
+      const addPost = (x, z) => {
+        const post = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.028, 0.028, 0.93, 8),
+          stairRailMat
+        );
+        post.position.set(x, midY, z);
+        post.castShadow = true;
+        post.receiveShadow = true;
+        parent.add(post);
+        stairRailMeshes.push(post);
+      };
+
+      // 西侧通长栏杆
+      addBar([0.05, 0.05, maxZ - minZ], [minX, railY, (minZ + maxZ) / 2]);
+      for (const z of [minZ + 0.04, (minZ + maxZ) / 2, maxZ - 0.04]) {
+        addPost(minX, z);
+      }
+      // 南侧栏杆
+      addBar([maxX - minX, 0.05, 0.05], [(minX + maxX) / 2, railY, maxZ]);
+      for (const x of [minX + 0.04, (minX + maxX) / 2, maxX - 0.04]) {
+        addPost(x, maxZ);
+      }
+    }
+
+    let levelY = BASE_Y;
+
+    tiers.forEach((tier, index) => {
+      const { w, d, h } = tier;
+
+      // 每层（墙体 + 屋顶 + 窗户 + 线脚）独立成组，便于分层显示
+      const tierGroup = new THREE.Group();
+      tierGroup.name = 'group_floor' + (index + 1);
+      villa.add(tierGroup);
+      floorGroups.push(tierGroup);
+
+      // 底层台基 + 入口台阶（归属一楼，切到其它楼层时一起隐藏）
+      if (index === 0) {
+        addBox(tierGroup, [w + 0.7, BASE_Y, d + 0.7], [0, BASE_Y / 2, 0], trimMat);
+        addBox(tierGroup, [2.4, 0.14, 0.7], [0, 0.07, 4.25], stoneStepMat, 0.02);
+      }
+
+      // 中空外墙：后墙 + 两侧墙 + 带门窗洞口的正面墙
+      const t = WALL_T;
+      const innerW = w - t * 2;
+      const innerD = d - t * 2;
+      const panelY = levelY + h / 2;
+      const zFront = d / 2 - t / 2;
+      const zBack = -d / 2 + t / 2;
+      const xLeft = -w / 2 + t / 2;
+      const xRight = w / 2 - t / 2;
+
+      addOuterWall(tierGroup, [w, h, t], [0, panelY, zBack], index);
+      addOuterWall(tierGroup, [t, h, innerD], [xLeft, panelY, 0], index);
+      addOuterWall(tierGroup, [t, h, innerD], [xRight, panelY, 0], index);
+
+      const winBottom = levelY + (index === 0 ? 0.34 : 0.6);
+      const winTop = levelY + h - 0.45;
+      const winH = winTop - winBottom;
+      const winY = (winTop + winBottom) / 2;
+      const doorW = 1.2;
+      const doorH = 2.15;
+      const doorTop = levelY + doorH;
+
+      const addFrontPanel = (xMin, xMax, yMin, yMax) => {
+        if (xMax - xMin < 0.02 || yMax - yMin < 0.02) return;
+        addOuterWall(
+          tierGroup,
+          [xMax - xMin, yMax - yMin, t],
+          [(xMin + xMax) / 2, (yMin + yMax) / 2, zFront],
+          index
+        );
+      };
+
+      if (index === 0) {
+        // 窗间墙 + 中央门垛
+        addFrontPanel(-w / 2, -2.95, winBottom, winTop);
+        addFrontPanel(2.95, w / 2, winBottom, winTop);
+        addFrontPanel(-0.75, -doorW / 2, winBottom, winTop);
+        addFrontPanel(doorW / 2, 0.75, winBottom, winTop);
+        // 窗下墙（门洞处断开）
+        addFrontPanel(-w / 2, -doorW / 2, levelY, winBottom);
+        addFrontPanel(doorW / 2, w / 2, levelY, winBottom);
+        // 门头
+        addFrontPanel(-doorW / 2, doorW / 2, doorTop, winTop);
+        // 窗上墙
+        addFrontPanel(-w / 2, w / 2, winTop, levelY + h);
+      } else {
+        let cursor = -w / 2;
+        const ranges = tier.windows
+          .map((win) => [win.x - win.w / 2, win.x + win.w / 2])
+          .sort((a, b) => a[0] - b[0]);
+        for (const [start, end] of ranges) {
+          addFrontPanel(cursor, start, winBottom, winTop);
+          cursor = end;
+        }
+        addFrontPanel(cursor, w / 2, winBottom, winTop);
+        addFrontPanel(-w / 2, w / 2, levelY, winBottom);
+        addFrontPanel(-w / 2, w / 2, winTop, levelY + h);
+      }
+
+      // 楼板 + 室内地面（一楼顶板 / 二楼地面给楼梯留洞）
+      addFloorSlab(
+        tierGroup,
+        w,
+        d,
+        levelY + h,
+        index === 0 ? STAIR.hole : null,
+        CEIL_T,
+        ceilingMat,
+        index
+      );
+      addFloorSlab(
+        tierGroup,
+        innerW,
+        innerD,
+        levelY + 0.06,
+        index === 1 ? STAIR.hole : null,
+        0.06,
+        interiorFloorMat,
+        index
+      );
+
+      // 四角深色立柱
+      const post = 0.18;
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          addBox(
+            tierGroup,
+            [post, h, post],
+            [
+              sx * (w / 2 - post / 2 + 0.02),
+              levelY + h / 2,
+              sz * (d / 2 - post / 2 + 0.02)
+            ],
+            trimMat
+          );
+        }
+      }
+
+      // 每层顶部一圈深色腰线（屋檐下方的装饰线条）
+      const bandH = 0.2;
+      const bandY = levelY + h - bandH / 2;
+      addBox(tierGroup, [w + 0.16, bandH, 0.12], [0, bandY, d / 2 + 0.04], trimMat);
+      addBox(tierGroup, [w + 0.16, bandH, 0.12], [0, bandY, -d / 2 - 0.04], trimMat);
+      addBox(tierGroup, [0.12, bandH, d + 0.16], [w / 2 + 0.04, bandY, 0], trimMat);
+      addBox(tierGroup, [0.12, bandH, d + 0.16], [-w / 2 - 0.04, bandY, 0], trimMat);
+
+      // 底层再加一圈踢脚线
+      if (index === 0) {
+        const kbH = 0.18;
+        const kbY = levelY + kbH / 2;
+        addBox(tierGroup, [w + 0.14, kbH, 0.1], [0, kbY, d / 2 + 0.03], trimMat);
+        addBox(tierGroup, [w + 0.14, kbH, 0.1], [0, kbY, -d / 2 - 0.03], trimMat);
+        addBox(tierGroup, [0.1, kbH, d + 0.14], [w / 2 + 0.03, kbY, 0], trimMat);
+        addBox(tierGroup, [0.1, kbH, d + 0.14], [-w / 2 - 0.03, kbY, 0], trimMat);
+      }
+
+      // 正面落地窗：深色半透明玻璃 + 深色窗框
+      for (const win of tier.windows) {
+        const faceZ = d / 2;
+        const bar = 0.12;
+
+        // 玻璃：半透明，可透出后面的白墙
+        const glass = new THREE.Mesh(
+          new THREE.PlaneGeometry(win.w, winH),
+          glassMat
+        );
+        glass.position.set(win.x, winY, faceZ + 0.02);
+        tierGroup.add(glass);
+
+        // 夜间从室内透出的暖光：白天强度为 0，只在夜晚逐渐亮起
+        const lamp = new THREE.PointLight(0xffb469, 0, 3.5, 2);
+        lamp.position.set(win.x, winY, faceZ + 0.35);
+        tierGroup.add(lamp);
+        windowLights.push(lamp);
+
+        // 窗框：四根深色边框条
+        const frameZ = faceZ + 0.05;
+        const frameBars = [
+          [win.w + bar * 2, bar, 0.06, win.x, winY + winH / 2 + bar / 2],
+          [win.w + bar * 2, bar, 0.06, win.x, winY - winH / 2 - bar / 2],
+          [bar, winH, 0.06, win.x - win.w / 2 - bar / 2, winY],
+          [bar, winH, 0.06, win.x + win.w / 2 + bar / 2, winY]
+        ];
+        for (const [bw, bh, bd, bx, by] of frameBars) {
+          const frameBar = addBox(tierGroup, [bw, bh, bd], [bx, by, frameZ], trimMat);
+          frameBar.castShadow = false;
+        }
+
+        // 竖向窗棂 + 上亮子横档（略凸于窗框，避免共面闪烁）
+        for (const offset of [-win.w / 4, win.w / 4]) {
+          const mullion = addBox(
+            tierGroup,
+            [0.06, winH, 0.05],
+            [win.x + offset, winY, faceZ + 0.065],
+            trimMat
+          );
+          mullion.castShadow = false;
+        }
+
+        const transom = addBox(
+          tierGroup,
+          [win.w, 0.05, 0.05],
+          [win.x, winY + winH * 0.22, faceZ + 0.065],
+          trimMat
+        );
+        transom.castShadow = false;
+      }
+
+      // 入户门：门套 + 半开门扇（首层）
+      if (index === 0) {
+        const frameZ = d / 2 + 0.03;
+        const jamb = 0.09;
+        addBox(tierGroup, [jamb, doorH, 0.12], [-doorW / 2 - jamb / 2, levelY + doorH / 2, frameZ], trimMat);
+        addBox(tierGroup, [jamb, doorH, 0.12], [doorW / 2 + jamb / 2, levelY + doorH / 2, frameZ], trimMat);
+        addBox(tierGroup, [doorW + jamb * 2, jamb, 0.12], [0, levelY + doorH + jamb / 2, frameZ], trimMat);
+        addBox(tierGroup, [doorW + 0.12, 0.05, 0.2], [0, levelY + 0.025, d / 2], trimMat);
+
+        const pivot = new THREE.Group();
+        pivot.position.set(-doorW / 2 + 0.03, levelY + doorH / 2, d / 2 + 0.06);
+        const leafW = doorW - 0.08;
+        const leaf = addBox(pivot, [leafW, doorH - 0.08, 0.05], [leafW / 2, 0, 0], doorMat, 0.02);
+        leaf.castShadow = true;
+        addBox(pivot, [0.05, 0.05, 0.12], [leafW - 0.12, 0, 0.08], trimMat, 0.02);
+        pivot.rotation.y = -Math.PI * 0.55;
+        tierGroup.add(pivot);
+      }
+
+      // 该层双坡屋顶（黛瓦）；下层屋顶给上层体块留洞
+      const nextTier = tiers[index + 1];
+      addGableRoof(
+        tierGroup,
+        w,
+        d,
+        levelY + h,
+        tier.rise,
+        tier.overhang,
+        nextTier ? { w: nextTier.w, d: nextTier.d } : null
+      );
+
+      // 室内极简家具：客厅 / 卧室 / 书房 + 次房间
+      const furnitureGroup = new THREE.Group();
+      furnitureGroup.name = 'furniture_floor' + (index + 1);
+      tierGroup.add(furnitureGroup);
+      roomBuilders[index](furnitureGroup, levelY);
+      if (index === 0) {
+        addBathroom1(furnitureGroup, levelY);
+      } else if (index === 1) {
+        addBathroom2(furnitureGroup, levelY);
+      } else {
+        addCloset3(furnitureGroup, levelY);
+      }
+
+      // 楼梯与二楼洞口栏杆
+      if (index === 0) {
+        buildStairs(tierGroup);
+      }
+      if (index === 1) {
+        buildStairwellRailing(tierGroup, levelY + 0.06);
+      }
+
+      // 室内隔断：一楼卫生间 / 二楼卫生间 / 三楼衣帽间
+      const floorTop = levelY + 0.06;
+      if (index === 0) {
+        const partH = 2.35;
+        const partY = floorTop + partH / 2;
+        addInteriorWall(tierGroup, [0.1, partH, 1.34], [-2.15, partY, -2.77]);
+        addInteriorWall(tierGroup, [0.1, partH, 1.05], [-2.15, partY, -0.725]);
+        addInteriorWall(tierGroup, [0.1, 0.3, 0.85], [-2.15, floorTop + partH - 0.15, -1.675]);
+        addInteriorWall(tierGroup, [1.29, partH, 0.1], [-2.795, partY, -0.2]);
+      } else if (index === 1) {
+        const partH = 2.2;
+        const partY = floorTop + partH / 2;
+        addInteriorWall(tierGroup, [0.1, partH, 1.39], [-1.25, partY, 1.845]);
+        addInteriorWall(tierGroup, [0.39, partH, 0.1], [-2.345, partY, 1.15]);
+        addInteriorWall(tierGroup, [0.85, 0.3, 0.1], [-1.725, floorTop + partH - 0.15, 1.15]);
+      } else {
+        const partH = 2.0;
+        const partY = floorTop + partH / 2;
+        addInteriorWall(tierGroup, [0.1, partH, 1.04], [-0.6, partY, 1.12]);
+        addInteriorWall(tierGroup, [0.19, partH, 0.1], [-1.545, partY, 0.6]);
+        addInteriorWall(tierGroup, [0.8, 0.3, 0.1], [-1.05, floorTop + partH - 0.15, 0.6]);
+      }
+
+      // 悬浮在房间上方的 3D 空间标签
+      const labelDef = roomLabelDefs[index];
+      const roomLabel = createRoomLabel(
+        labelDef.text,
+        [0, levelY + labelDef.y, labelDef.z]
+      );
+      roomLabel.name = 'label_floor' + (index + 1);
+      tierGroup.add(roomLabel);
+      floorLabels.push(roomLabel);
+
+      extraFloorLabels[index] = extraLabelDefs[index].map((def) => {
+        const label = createRoomLabel(def.text, [def.x, levelY + def.y, def.z]);
+        tierGroup.add(label);
+        return label;
+      });
+
+      // 室内暖光：夜间常亮；单独查看该层时再加强
+      // 灯泡贴着顶板安装（加一小段吊杆 + 灯罩），不会悬在视线高度挡住家具
+      const lightY = levelY + h - 0.28;
+      const interiorLight = new THREE.PointLight(0xffd8a8, 0, 6.5, 2);
+      interiorLight.position.set(0, lightY, -0.2);
+      tierGroup.add(interiorLight);
+      interiorLights.push(interiorLight);
+
+      addBox(tierGroup, [0.03, 0.16, 0.03], [0, levelY + h - 0.12, -0.2], trimMat, 0.012);
+      const shade = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.24, 0.1, 16),
+        trimMat
+      );
+      shade.position.set(0, lightY + 0.13, -0.2);
+      shade.castShadow = true;
+      tierGroup.add(shade);
+
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), lampGlowMat);
+      bulb.position.copy(interiorLight.position);
+      bulb.castShadow = false;
+      bulb.receiveShadow = false;
+      tierGroup.add(bulb);
+
+      levelY += h;
+    });
+
+    scene.add(villa);
+
+    // ================= 庭院环境 =================
+    // 半透明玻璃围栏界定庭院范围：深色木立柱 + 玻璃面板 + 中式竖棂
+    const COURTYARD_HALF = 8.6; // 庭院半边长（米）
+    const GATE_HALF = 1.7;      // 正面入口的半宽
+    const FENCE_H = 1.35;       // 围栏高度
+
+    const courtyard = new THREE.Group();
+    courtyard.name = 'courtyard';
+    scene.add(courtyard);
+
+    // 草坪凹凸贴图：中灰噪声 + 稀疏草叶短笔触，只扰动法线，不改变低饱和的卡通配色
+    function createGrassBumpTexture() {
+      const size = 128;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const ctx = cv.getContext('2d');
+
+      let seed = 20261111;
+      const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+
+      const img = ctx.createImageData(size, size);
+      for (let i = 0; i < size * size; i++) {
+        const v = 110 + Math.floor(rand() * 50);
+        img.data[i * 4] = v;
+        img.data[i * 4 + 1] = v;
+        img.data[i * 4 + 2] = v;
+        img.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+
+      ctx.strokeStyle = 'rgba(232, 232, 232, 0.55)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 220; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const len = 2 + rand() * 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + (rand() - 0.5) * 2, y - len);
+        ctx.stroke();
+      }
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(28, 28);
+      tex.anisotropy = 4;
+      return tex; // bumpMap 是线性数据，保持默认 NoColorSpace
+    }
+
+    // 庭院草地 + 入户石径（颜色随昼夜一起插值）
+    // 草坪保持卡通低饱和，只用很轻的 bumpMap 增加近景细节
+    const courtyardGroundMat = new THREE.MeshStandardMaterial({
+      color: 0x6f8a5f,
+      roughness: 1,
+      metalness: 0,
+      bumpMap: createGrassBumpTexture(),
+      bumpScale: 0.06
+    });
+    const courtyardPathMat = new THREE.MeshStandardMaterial({
+      color: 0x8a9099, roughness: 0.96, metalness: 0.02,
+      emissive: 0x2f3a46, emissiveIntensity: 0 // 夜间给石板一点冷调自发光，避免完全没入黑暗
+    });
+
+    const courtyardGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(COURTYARD_HALF * 2, COURTYARD_HALF * 2),
+      courtyardGroundMat
+    );
+    courtyardGround.rotation.x = -Math.PI / 2;
+    courtyardGround.position.y = 0.004;
+    courtyardGround.receiveShadow = true;
+    courtyard.add(courtyardGround);
+
+    // 灰色石板路：两列错缝铺装，单次 InstancedMesh 绘制，低开销也有细节
+    const pathStartZ = 3.98;  // 别墅台基外缘
+    const pathEndZ = COURTYARD_HALF - 0.18;
+    const slabW = 1.18;
+    const slabD = 0.62;
+    const slabGap = 0.09;
+    const slabRows = Math.floor((pathEndZ - pathStartZ) / (slabD + slabGap));
+    const slabCols = 2;
+    const stonePath = new THREE.InstancedMesh(
+      // 石板同样使用圆角几何体：边缘被轻微磨圆，像被踩了很多年的旧石料
+      getRoundedBoxGeometry(slabW, 0.05, slabD),
+      courtyardPathMat,
+      slabRows * slabCols
+    );
+    stonePath.name = 'stone-path';
+    stonePath.receiveShadow = true;
+    stonePath.castShadow = false;
+
+    const slabDummy = new THREE.Object3D();
+    let slabIndex = 0;
+    for (let row = 0; row < slabRows; row++) {
+      for (let col = 0; col < slabCols; col++) {
+        slabDummy.position.set(
+          (col - (slabCols - 1) / 2) * (slabW + 0.12),
+          0.026,
+          pathStartZ + slabD / 2 + row * (slabD + slabGap)
+        );
+        // 极轻微的错位，避免像一条打印出来的灰带
+        slabDummy.rotation.y = ((row + col) % 2 === 0 ? 1 : -1) * 0.008;
+        slabDummy.updateMatrix();
+        stonePath.setMatrixAt(slabIndex, slabDummy.matrix);
+        slabIndex++;
+      }
+    }
+    stonePath.instanceMatrix.needsUpdate = true;
+    courtyard.add(stonePath);
+
+    // 门前石阶
+    addBox(courtyard, [2.9, 0.1, 0.7], [0, 0.05, COURTYARD_HALF - 0.45], courtyardPathMat);
+
+    // ---------- 围栏材质 ----------
+    const fenceWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x3a2d26, roughness: 0.7, metalness: 0.08
+    });
+    const fenceGlassMat = new THREE.MeshStandardMaterial({
+      color: 0xcfe8ee,
+      emissive: 0x5c88a8,
+      emissiveIntensity: 0,
+      roughness: 0.32,
+      metalness: 0.02,
+      envMapIntensity: 0.4,
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    const fenceGroup = new THREE.Group();
+    fenceGroup.name = 'fence';
+    courtyard.add(fenceGroup);
+
+    const fencePosts = new Map();
+
+    function registerFencePost(x, z) {
+      const key = x.toFixed(2) + ':' + z.toFixed(2);
+      if (!fencePosts.has(key)) fencePosts.set(key, [x, z]);
+    }
+
+    function addFenceRail(ax, az, bx, bz, y, height, depth) {
+      const len = Math.hypot(bx - ax, bz - az);
+      const rail = addBox(
+        fenceGroup,
+        [len, height, depth],
+        [(ax + bx) / 2, y, (az + bz) / 2],
+        fenceWoodMat
+      );
+      rail.rotation.y = Math.atan2(-(bz - az), bx - ax);
+      return rail;
+    }
+
+    function addFenceRun(ax, az, bx, bz) {
+      const dx = bx - ax;
+      const dz = bz - az;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.2) return;
+
+      const angle = Math.atan2(-dz, dx);
+      const panelH = FENCE_H - 0.5;
+
+      // 半透明玻璃面板（不投影，避免地面出现大块暗影）
+      const glass = addBox(
+        fenceGroup,
+        [len - 0.16, panelH, 0.04],
+        [(ax + bx) / 2, 0.3 + panelH / 2, (az + bz) / 2],
+        fenceGlassMat
+      );
+      glass.rotation.y = angle;
+      glass.castShadow = false;
+      glass.receiveShadow = false;
+
+      // 上下木横档
+      addFenceRail(ax, az, bx, bz, 0.3, 0.07, 0.1);
+      addFenceRail(ax, az, bx, bz, FENCE_H - 0.06, 0.09, 0.18);
+
+      // 中式木格栅竖棂
+      const bars = Math.max(2, Math.round(len / 1.55));
+      const barH = FENCE_H - 0.42;
+      for (let i = 1; i < bars; i++) {
+        const t = i / bars;
+        addBox(
+          fenceGroup,
+          [0.05, barH, 0.07],
+          [ax + dx * t, 0.3 + barH / 2, az + dz * t],
+          fenceWoodMat
+        );
+      }
+
+      // 均匀布置立柱（拐角处按键值去重）
+      const posts = Math.max(1, Math.round(len / 2.15));
+      for (let i = 0; i <= posts; i++) {
+        const t = i / posts;
+        registerFencePost(ax + dx * t, az + dz * t);
+      }
+    }
+
+    // 正面（+Z）留出入口，其余三面完整围合
+    addFenceRun(-COURTYARD_HALF, COURTYARD_HALF, -GATE_HALF, COURTYARD_HALF);
+    addFenceRun(GATE_HALF, COURTYARD_HALF, COURTYARD_HALF, COURTYARD_HALF);
+    addFenceRun(COURTYARD_HALF, COURTYARD_HALF, COURTYARD_HALF, -COURTYARD_HALF);
+    addFenceRun(COURTYARD_HALF, -COURTYARD_HALF, -COURTYARD_HALF, -COURTYARD_HALF);
+    addFenceRun(-COURTYARD_HALF, -COURTYARD_HALF, -COURTYARD_HALF, COURTYARD_HALF);
+
+    for (const [px, pz] of fencePosts.values()) {
+      addBox(fenceGroup, [0.16, FENCE_H + 0.12, 0.16], [px, (FENCE_H + 0.12) / 2, pz], fenceWoodMat);
+      addBox(fenceGroup, [0.26, 0.08, 0.26], [px, FENCE_H + 0.16, pz], fenceWoodMat);
+    }
+
+    // 中式门头：两根高立柱 + 横梁 + 小坡顶
+    for (const sx of [-1, 1]) {
+      addBox(fenceGroup, [0.22, 2.05, 0.22], [sx * GATE_HALF, 1.025, COURTYARD_HALF], fenceWoodMat);
+      addBox(fenceGroup, [0.34, 0.1, 0.34], [sx * GATE_HALF, 2.1, COURTYARD_HALF], fenceWoodMat);
+    }
+    addBox(
+      fenceGroup,
+      [GATE_HALF * 2 + 0.5, 0.16, 0.26],
+      [0, 2.0, COURTYARD_HALF],
+      fenceWoodMat
+    );
+    addBox(
+      fenceGroup,
+      [GATE_HALF * 2 + 0.9, 0.1, 0.62],
+      [0, 2.13, COURTYARD_HALF],
+      roofMat
+    );
+
+    // ---------- 庭院树木（圆柱树干 + 球体 / 圆锥树冠） ----------
+    const treeGroup = new THREE.Group();
+    treeGroup.name = 'trees';
+    courtyard.add(treeGroup);
+
+    // 固定随机种子，保证每次打开页面时庭院布局一致
+    function makeRandom(seed) {
+      let s = seed >>> 0;
+      return function random() {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+    }
+    const gardenRandom = makeRandom(20261111);
+
+    const trunkGeo = new THREE.CylinderGeometry(0.12, 0.2, 1, 7);
+    const canopyBlobGeo = new THREE.IcosahedronGeometry(1, 1);
+    const canopyConeGeo = new THREE.ConeGeometry(1, 1.6, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x5a4033, roughness: 0.9, metalness: 0.02
+    });
+    // 深绿低饱和树冠：夜里不会被月光照成荧光绿
+    const leafMats = [0x2f5a3e, 0x376b47, 0x244a33].map(
+      (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.96, metalness: 0 })
+    );
+
+    // ================= 外部 GLTF 模型加载 =================
+    const gltfLoader = new GLTFLoader();
+    const modelCache = new Map();          // 同一 url 只下载一次，后续实例 clone
+    const externalModelMeshes = [];        // 供漫游射线碰撞使用
+    let roamRayTargetsReady = false;
+
+    // 外部模型统一挂在独立 Group 下，方便整体移动 / 显隐 / 调试
+    const externalModels = new THREE.Group();
+    externalModels.name = 'external-models';
+    scene.add(externalModels);
+
+    // 通用加载函数：loadModel('models/tree_oak.glb', [-11.6, 0, 8.4], { scale: 1.05 })
+    // - 自动开启投影 / 接收阴影，并沿用 scene.environment 做 PBR 反射；
+    // - 返回 Promise<THREE.Group>，方便 .then() 里继续调位置 / 动画。
+    function loadModel(url, position = [0, 0, 0], options = {}) {
+      const {
+        scale = 1,
+        rotationY = 0,
+        parent = externalModels,
+        castShadow = true,
+        receiveShadow = true
+      } = options;
+
+      return new Promise((resolve, reject) => {
+        const instantiate = (gltf) => {
+          // clone 让同一份模型可以在场景里摆多棵，互不影响
+          const model = gltf.scene.clone(true);
+          model.position.set(position[0], position[1], position[2]);
+          model.rotation.y = rotationY;
+          model.scale.setScalar(scale);
+
+          const meshes = [];
+          model.traverse((obj) => {
+            if (!obj.isMesh) return;
+            obj.castShadow = castShadow;
+            obj.receiveShadow = receiveShadow;
+            meshes.push(obj);
+
+            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            for (const mat of mats) {
+              // 没有显式 envMap 的材质会自动使用 scene.environment
+              if (mat && 'envMapIntensity' in mat) mat.envMapIntensity = 1.0;
+            }
+          });
+
+          parent.add(model);
+          for (const mesh of meshes) {
+            externalModelMeshes.push(mesh);
+            if (roamRayTargetsReady) roamRayTargets.push(mesh);
+          }
+
+          console.info('[villa] 已加载外部模型:', url);
+          resolve(model);
+        };
+
+        const cached = modelCache.get(url);
+        if (cached) {
+          instantiate(cached);
+          return;
+        }
+
+        gltfLoader.load(
+          url,
+          (gltf) => {
+            modelCache.set(url, gltf);
+            instantiate(gltf);
+          },
+          undefined,
+          (error) => {
+            console.error('[villa] 外部模型加载失败:', url, error);
+            reject(error);
+          }
+        );
+      });
+    }
+    // 控制台可直接调用：loadModel('models/tree_oak.glb', [0, 0, 0])
+    window.loadModel = loadModel;
+
+    function addTree(x, z, scale, kind) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.rotation.y = gardenRandom() * Math.PI * 2;
+      treeGroup.add(tree);
+
+      const trunkH = (1.7 + gardenRandom() * 1.0) * scale;
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.scale.set(scale, trunkH, scale);
+      trunk.position.y = trunkH / 2;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      tree.add(trunk);
+
+      if (kind === 'pine') {
+        // 圆锥层叠树冠
+        const mat = leafMats[Math.floor(gardenRandom() * leafMats.length)];
+        for (let i = 0; i < 3; i++) {
+          const cone = new THREE.Mesh(canopyConeGeo, mat);
+          const s = (1.25 - i * 0.26) * scale;
+          cone.scale.set(s, s, s);
+          cone.position.y = trunkH + (0.3 + i * 0.52) * scale;
+          cone.rotation.y = gardenRandom() * Math.PI;
+          cone.castShadow = true;
+          tree.add(cone);
+        }
+        return;
+      }
+
+      // 阔叶树：2~3 个多面体团成树冠，保持 Low-Poly 块面感
+      const mat = leafMats[Math.floor(gardenRandom() * leafMats.length)];
+      const blobs = 2 + Math.floor(gardenRandom() * 2);
+      for (let i = 0; i < blobs; i++) {
+        const r = (0.82 + gardenRandom() * 0.5) * scale;
+        const blob = new THREE.Mesh(canopyBlobGeo, mat);
+        blob.scale.set(r, r * 0.84, r);
+        blob.position.set(
+          (gardenRandom() - 0.5) * 0.9 * scale,
+          trunkH + (0.35 + gardenRandom() * 0.5) * scale,
+          (gardenRandom() - 0.5) * 0.9 * scale
+        );
+        blob.castShadow = true;
+        blob.receiveShadow = true;
+        tree.add(blob);
+      }
+    }
+
+    // 固定 5 棵 Low-Poly 树：给院门与主立面留出视线，数量克制、避免遮挡
+    const TREE_LAYOUT = [
+      [-11.6, 8.4, 1.05, 'pine'],
+      [11.9, 7.6, 1.0, 'leaf'],
+      [-12.4, -4.2, 1.1, 'leaf'],
+      [12.2, -6.0, 0.95, 'pine'],
+      [0.0, -14.8, 1.2, 'pine']
+    ];
+
+    // ---------- 如何把圆锥体树换成下载的高质量树木模型 ----------
+    // 1. 从 Poly Haven / Sketchfab / Quaternius 下载带贴图的 .glb（不要用几十 MB 的扫描模型，
+    //    单棵树 1~5 MB、面数 1 万左右最适合这个场景）；
+    // 2. 放到 villa.html 同目录的 models/ 文件夹，例如 models/tree_oak.glb（建议用本地服务器打开）；
+    // 3. 把下面 TREE_MODEL_URL 改成 'models/tree_oak.glb'，刷新页面即可用外模替换 5 棵 Low-Poly 树；
+    // 4. 若只想替换其中一棵，保持 TREE_MODEL_URL 为空，手动调用：
+    //    loadModel('models/tree_oak.glb', [-11.6, 0, 8.4], { scale: 1.05, rotationY: 0.6 });
+    //    并从 TREE_LAYOUT 里删掉对应的一行。
+    // 加载失败会自动回退到原来的 Low-Poly 树，页面不会变空。
+    const TREE_MODEL_URL = ''; // 例如 'models/tree_oak.glb'
+
+    for (const [x, z, scale, kind] of TREE_LAYOUT) {
+      if (TREE_MODEL_URL) {
+        loadModel(TREE_MODEL_URL, [x, 0, z], {
+          scale,
+          parent: treeGroup,
+          rotationY: gardenRandom() * Math.PI * 2
+        }).catch(() => {
+          // 外部模型失败时保留原来的圆锥 / 多面体树
+          addTree(x, z, scale, kind);
+        });
+      } else {
+        addTree(x, z, scale, kind);
+      }
+    }
+
+    // ================= 外围森林：200 棵实例化大树 =================
+    // ★ 调大树数量：只改 FOREST_TREE_COUNT（200 → 300 / 400 都行）。
+    // ★ 调大森林范围：改 FOREST_RANGE（40 表示 X / Z ∈ [-40, 40]）。
+    // 树干 / 阔叶树冠 / 松树锥冠各 1 个 InstancedMesh，200 棵树只增加 3 个 draw call。
+    const FOREST_TREE_COUNT = CONFIG.counts.forestTrees;
+    const FOREST_RANGE = CONFIG.counts.forestRange;
+    const forestRandom = makeRandom(20261115);
+    const forestTrees = [];
+
+    let forestGuard = 0;
+    while (forestTrees.length < FOREST_TREE_COUNT && forestGuard++ < FOREST_TREE_COUNT * 160) {
+      const x = (forestRandom() - 0.5) * FOREST_RANGE * 2;
+      const z = (forestRandom() - 0.5) * FOREST_RANGE * 2;
+
+      // 房子 + 庭院：中间 25m × 25m 完全留空（含 2.5m 缓冲）
+      if (Math.abs(x) < 12.5 && Math.abs(z) < 12.5) continue;
+      // 河道与两岸：不让树长在水里，也避免树根悬空
+      if (Math.abs(z - RIVER_CENTER_Z) < RIVER_HALF_WIDTH + 2.6) continue;
+      // 院门 → 木桥的动线走廊
+      if (Math.abs(x) < 5 && z > COURTYARD_HALF - 1 && z < BRIDGE_END_Z + 3) continue;
+      // 默认机位（x≈11 / z≈32）与别墅之间留一条观察窗，别让前排树挡住主立面
+      if (z > 26 && z < 35 && Math.abs(x) < 8.5) continue;
+
+      const scale = 0.72 + forestRandom() * 0.95; // 0.72~1.67：高矮错落，不是复制粘贴
+      const kind = forestRandom() < 0.34 ? 'pine' : 'leaf';
+      forestTrees.push({
+        x,
+        z,
+        scale,
+        kind,
+        trunkH: (1.5 + forestRandom() * 1.1) * scale,
+        yaw: forestRandom() * Math.PI * 2,
+        tone: leafMats[Math.floor(forestRandom() * leafMats.length)].color
+      });
+    }
+
+    const forestTrunkInstances = [];
+    const forestLeafInstances = [];
+    const forestPineInstances = [];
+
+    for (const tree of forestTrees) {
+      const trunkRadius = tree.scale * (0.85 + forestRandom() * 0.35);
+      forestTrunkInstances.push({
+        x: tree.x,
+        z: tree.z,
+        y: tree.trunkH / 2,
+        yaw: tree.yaw,
+        sx: trunkRadius,
+        sy: tree.trunkH,
+        sz: trunkRadius
+      });
+
+      if (tree.kind === 'pine') {
+        // 松树：3 层圆锥，越往上越小
+        for (let i = 0; i < 3; i++) {
+          const s = (1.15 - i * 0.24) * tree.scale * (0.92 + forestRandom() * 0.16);
+          forestPineInstances.push({
+            x: tree.x + (forestRandom() - 0.5) * 0.12 * tree.scale,
+            y: tree.trunkH + (0.18 + i * 0.48) * tree.scale,
+            z: tree.z + (forestRandom() - 0.5) * 0.12 * tree.scale,
+            size: s,
+            yaw: forestRandom() * Math.PI,
+            tone: tree.tone
+          });
+        }
+      } else {
+        // 阔叶树：3 团多面体树冠，随机大小 / 位置，轮廓不重复
+        for (let i = 0; i < 3; i++) {
+          const canopyScale = (0.88 + forestRandom() * 0.62) * tree.scale;
+          forestLeafInstances.push({
+            x: tree.x + (forestRandom() - 0.5) * 1.25 * tree.scale,
+            y: tree.trunkH + (0.32 + forestRandom() * 0.62) * tree.scale,
+            z: tree.z + (forestRandom() - 0.5) * 1.25 * tree.scale,
+            sx: canopyScale,
+            sy: canopyScale * (0.78 + forestRandom() * 0.28),
+            sz: canopyScale,
+            yaw: forestRandom() * Math.PI,
+            tone: tree.tone
+          });
+        }
+      }
+    }
+
+    const forestGroup = new THREE.Group();
+    forestGroup.name = 'forest';
+    scene.add(forestGroup);
+
+    const forestDummy = new THREE.Object3D();
+    const forestColor = new THREE.Color();
+
+    const forestTrunkMesh = new THREE.InstancedMesh(
+      trunkGeo,
+      trunkMat,
+      forestTrunkInstances.length
+    );
+    forestTrunkMesh.name = 'forest-trunks';
+    forestTrunkMesh.castShadow = true;
+    forestTrunkMesh.receiveShadow = true;
+    forestTrunkInstances.forEach((inst, i) => {
+      forestDummy.position.set(inst.x, inst.y, inst.z);
+      forestDummy.rotation.set(0, inst.yaw, 0);
+      forestDummy.scale.set(inst.sx, inst.sy, inst.sz);
+      forestDummy.updateMatrix();
+      forestTrunkMesh.setMatrixAt(i, forestDummy.matrix);
+    });
+    forestTrunkMesh.instanceMatrix.needsUpdate = true;
+    forestTrunkMesh.computeBoundingSphere?.();
+    forestGroup.add(forestTrunkMesh);
+
+    const forestLeafMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, // 真正的深绿来自 instanceColor，和庭院 5 棵树同一套色板
+      roughness: 0.96,
+      metalness: 0,
+      flatShading: true
+    });
+    const forestLeafMesh = new THREE.InstancedMesh(
+      canopyBlobGeo,
+      forestLeafMat,
+      forestLeafInstances.length
+    );
+    forestLeafMesh.name = 'forest-leaf-canopies';
+    forestLeafMesh.castShadow = true;
+    forestLeafMesh.receiveShadow = true;
+    forestLeafInstances.forEach((inst, i) => {
+      forestDummy.position.set(inst.x, inst.y, inst.z);
+      forestDummy.rotation.set(0, inst.yaw, 0);
+      forestDummy.scale.set(inst.sx, inst.sy, inst.sz);
+      forestDummy.updateMatrix();
+      forestLeafMesh.setMatrixAt(i, forestDummy.matrix);
+      forestLeafMesh.setColorAt(i, forestColor.copy(inst.tone));
+    });
+    forestLeafMesh.instanceMatrix.needsUpdate = true;
+    if (forestLeafMesh.instanceColor) forestLeafMesh.instanceColor.needsUpdate = true;
+    forestLeafMesh.computeBoundingSphere?.();
+    forestGroup.add(forestLeafMesh);
+
+    const forestPineMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.96,
+      metalness: 0,
+      flatShading: true
+    });
+    const forestPineMesh = new THREE.InstancedMesh(
+      canopyConeGeo,
+      forestPineMat,
+      forestPineInstances.length
+    );
+    forestPineMesh.name = 'forest-pine-canopies';
+    forestPineMesh.castShadow = true;
+    forestPineMesh.receiveShadow = true;
+    forestPineInstances.forEach((inst, i) => {
+      forestDummy.position.set(inst.x, inst.y, inst.z);
+      forestDummy.rotation.set(0, inst.yaw, 0);
+      forestDummy.scale.set(inst.size, inst.size, inst.size);
+      forestDummy.updateMatrix();
+      forestPineMesh.setMatrixAt(i, forestDummy.matrix);
+      forestPineMesh.setColorAt(i, forestColor.copy(inst.tone));
+    });
+    forestPineMesh.instanceMatrix.needsUpdate = true;
+    if (forestPineMesh.instanceColor) forestPineMesh.instanceColor.needsUpdate = true;
+    forestPineMesh.computeBoundingSphere?.();
+    forestGroup.add(forestPineMesh);
+
+    // 庭院四角低矮灌木，增强庭院的层次
+    for (const [bx, bz] of [[-6.2, 5.6], [6.2, 5.6], [-6.2, -5.8], [6.2, -5.8]]) {
+      const bush = new THREE.Mesh(canopyBlobGeo, leafMats[1]);
+      bush.scale.set(0.58, 0.44, 0.58);
+      bush.position.set(bx, 0.42, bz);
+      bush.castShadow = true;
+      bush.receiveShadow = true;
+      courtyard.add(bush);
+    }
+
+    // ================= 草地 / 河流 / 木桥 / 灌木 / 石头 =================
+    // 统一原则：重复物件全部走 InstancedMesh，草地 4800 丛也只占 1 个 draw call；
+    // 桥体只保留 2 个实例化网格，避免几十个独立 Mesh 把 draw call 拉高。
+    const gardenDetailRandom = makeRandom(20261112);
+
+    // 庭院四角灌木坐标（草地避让 / 漫游碰撞共用）
+    const COURTYARD_BUSH_SPOTS = [[-6.2, 5.6], [6.2, 5.6], [-6.2, -5.8], [6.2, -5.8]];
+
+    // ---------- 庭院外的大草坪：把原来空旷的深灰地面铺成草地 ----------
+    const meadowMat = new THREE.MeshStandardMaterial({
+      color: 0x6d8a5c,
+      roughness: 1,
+      metalness: 0,
+      bumpMap: (() => {
+        const tex = createGrassBumpTexture();
+        tex.repeat.set(64, 64); // 大范围草地，纹理重复更多，近景才不糊
+        return tex;
+      })(),
+      bumpScale: 0.05
+    });
+    const meadow = new THREE.Mesh(new THREE.PlaneGeometry(130, 130), meadowMat);
+    meadow.name = 'meadow';
+    meadow.rotation.x = -Math.PI / 2;
+    meadow.position.y = 0.002; // 低于庭院草坪（0.004），院内不会被它盖住
+    meadow.receiveShadow = true;
+    scene.add(meadow);
+
+    // ---------- 河流：水面 + 河床，横穿庭院前方的草地 ----------
+    const riverBankMat = new THREE.MeshStandardMaterial({
+      color: 0x6b6a52,
+      roughness: 1,
+      metalness: 0
+    });
+    const riverBank = new THREE.Mesh(
+      new THREE.PlaneGeometry(RIVER_HALF_LENGTH * 2, RIVER_HALF_WIDTH * 2 + 2.2),
+      riverBankMat
+    );
+    riverBank.name = 'river-bank';
+    riverBank.rotation.x = -Math.PI / 2;
+    riverBank.position.set(0, 0.008, RIVER_CENTER_Z);
+    riverBank.receiveShadow = true;
+    scene.add(riverBank);
+
+    // 水面细波纹：程序化 bumpMap，只扰动法线，不额外增加面数
+    function createWaterBumpTexture() {
+      const size = 128;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, size, size);
+
+      let seed = 771247;
+      const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+      for (let i = 0; i < 46; i++) {
+        const y = rand() * size;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.08 + rand() * 0.16})`;
+        ctx.lineWidth = 0.8 + rand() * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        for (let x = 0; x <= size; x += 8) {
+          ctx.lineTo(x, y + Math.sin((x / size) * Math.PI * 4 + i) * 1.8);
+        }
+        ctx.stroke();
+      }
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(20, 3);
+      return tex; // bumpMap 是线性数据，保持默认 NoColorSpace
+    }
+    const waterBumpTexture = createWaterBumpTexture();
+
+    const riverWaterMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.day.river,
+      // 水面严禁镜面：高粗糙度 + 0 金属度，只保留柔和的天空漫反射
+      roughness: CONFIG.materials.waterRoughness,
+      metalness: CONFIG.materials.waterMetalness,
+      envMapIntensity: CONFIG.materials.waterEnvMapIntensity,
+      transparent: true,
+      opacity: CONFIG.materials.waterOpacity,
+      bumpMap: waterBumpTexture,
+      bumpScale: CONFIG.materials.waterBumpScale, // 用细波纹提供水面细节，而不是靠高光
+      emissive: CONFIG.colors.material.waterEmissive, // 夜间只靠这点冷蓝自发光保留水色
+      emissiveIntensity: 0
+    });
+    const riverWater = new THREE.Mesh(
+      new THREE.PlaneGeometry(RIVER_HALF_LENGTH * 2, RIVER_HALF_WIDTH * 2),
+      riverWaterMat
+    );
+    riverWater.name = 'river-water';
+    riverWater.rotation.x = -Math.PI / 2;
+    riverWater.position.set(0, 0.035, RIVER_CENTER_Z);
+    riverWater.receiveShadow = true;
+    scene.add(riverWater);
+
+    // ---------- 水面涟漪：几张随时间扩散、淡出的圆环贴片 ----------
+    // 用 PlaneGeometry + 程序化圆环贴图，不引入外部法线 / 纹理资源；
+    // 每个涟漪独立缩放 + 透明度衰减，模拟水滴落入或鱼儿游过后的波纹。
+    function createRippleTexture() {
+      const size = 128;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const ctx = cv.getContext('2d');
+      const c = size / 2;
+
+      const grad = ctx.createRadialGradient(c, c, 0, c, c, c);
+      grad.addColorStop(0.0, 'rgba(255, 255, 255, 0)');
+      grad.addColorStop(0.56, 'rgba(255, 255, 255, 0)');
+      grad.addColorStop(0.72, 'rgba(255, 255, 255, 0.92)');
+      grad.addColorStop(0.82, 'rgba(255, 255, 255, 0.16)');
+      grad.addColorStop(0.9, 'rgba(255, 255, 255, 0.42)');
+      grad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      return tex;
+    }
+
+    const rippleTexture = createRippleTexture();
+    const ripplePlaneGeo = new THREE.PlaneGeometry(1, 1);
+    const rippleRandom = makeRandom(20261118);
+    const waterRipples = [];
+
+    for (let i = 0; i < CONFIG.ripples.count; i++) {
+      const rippleMat = new THREE.MeshBasicMaterial({
+        map: rippleTexture,
+        color: 0xbfe9ff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide
+      });
+      const ripple = new THREE.Mesh(ripplePlaneGeo, rippleMat);
+      ripple.name = 'water-ripple-' + i;
+      ripple.rotation.x = -Math.PI / 2;
+      ripple.position.set(
+        (rippleRandom() - 0.5) * 2 * (RIVER_HALF_LENGTH - 8),
+        0.046,
+        RIVER_CENTER_Z + (rippleRandom() - 0.5) * 2 * (RIVER_HALF_WIDTH - 0.9)
+      );
+      ripple.renderOrder = 3;
+      scene.add(ripple);
+
+      waterRipples.push({
+        mesh: ripple,
+        mat: rippleMat,
+        phase: rippleRandom(),
+        speed: THREE.MathUtils.lerp(
+          CONFIG.ripples.speedMin,
+          CONFIG.ripples.speedMax,
+          rippleRandom()
+        ),
+        maxSize: THREE.MathUtils.lerp(
+          CONFIG.ripples.sizeMin,
+          CONFIG.ripples.sizeMax,
+          rippleRandom()
+        )
+      });
+    }
+
+    // time 为全局秒数；nightFactor 让涟漪在夜色里稍微亮一点
+    function updateWaterRipples(time, nightFactor) {
+      const visibility = CONFIG.ripples.opacity * (1 + CONFIG.ripples.nightBoost * nightFactor);
+      for (const ripple of waterRipples) {
+        const cycle = (time * ripple.speed + ripple.phase) % 1;
+        const size = 0.45 + cycle * ripple.maxSize;
+        ripple.mesh.scale.set(size, size, 1);
+        const fade = (1 - cycle) * (1 - cycle);
+        ripple.mat.opacity = fade * visibility;
+      }
+    }
+
+    // ---------- 木桥：扁长方体拼出桥面 + 护栏，2 个 InstancedMesh 完成 ----------
+    const bridgeGroup = new THREE.Group();
+    bridgeGroup.name = 'wooden-bridge';
+    scene.add(bridgeGroup);
+
+    const bridgeWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x7a5638, roughness: 0.88, metalness: 0.02
+    });
+    const bridgeDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x4d3524, roughness: 0.92, metalness: 0.02
+    });
+
+    const unitBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const bridgeLength = BRIDGE_END_Z - BRIDGE_START_Z;
+    const bridgeCenterZ = (BRIDGE_START_Z + BRIDGE_END_Z) / 2;
+    const BRIDGE_DECK_TOP = 0.16;
+
+    // 桥面板：22 块横向木板，全部实例化
+    const plankCount = 22;
+    const bridgePlanks = new THREE.InstancedMesh(unitBoxGeo, bridgeWoodMat, plankCount);
+    bridgePlanks.name = 'bridge-planks';
+    bridgePlanks.castShadow = true;
+    bridgePlanks.receiveShadow = true;
+
+    const bridgeDummy = new THREE.Object3D();
+    for (let i = 0; i < plankCount; i++) {
+      const t = (i + 0.5) / plankCount;
+      bridgeDummy.position.set(0, BRIDGE_DECK_TOP - 0.035, BRIDGE_START_Z + t * bridgeLength);
+      bridgeDummy.rotation.set(0, (gardenDetailRandom() - 0.5) * 0.03, 0);
+      bridgeDummy.scale.set(
+        BRIDGE_HALF_WIDTH * 2,
+        0.07,
+        bridgeLength / plankCount - 0.035
+      );
+      bridgeDummy.updateMatrix();
+      bridgePlanks.setMatrixAt(i, bridgeDummy.matrix);
+    }
+    bridgePlanks.instanceMatrix.needsUpdate = true;
+    bridgeGroup.add(bridgePlanks);
+
+    // 纵梁 / 端梁 / 立柱 / 扶手 / 中栏 / 踢脚：同一材质合并成 1 个实例化网格
+    const bridgeFrameParts = [];
+    const pushBridgePart = (x, y, z, sx, sy, sz) => {
+      bridgeFrameParts.push({ x, y, z, sx, sy, sz });
+    };
+
+    for (const sx of [-1, 1]) {
+      pushBridgePart(sx * 1.08, 0.07, bridgeCenterZ, 0.16, 0.16, bridgeLength);
+    }
+    pushBridgePart(0, 0.07, BRIDGE_START_Z + 0.1, BRIDGE_HALF_WIDTH * 2, 0.16, 0.18);
+    pushBridgePart(0, 0.07, BRIDGE_END_Z - 0.1, BRIDGE_HALF_WIDTH * 2, 0.16, 0.18);
+
+    const bridgePostCount = 9;
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < bridgePostCount; i++) {
+        const t = i / (bridgePostCount - 1);
+        const z = BRIDGE_START_Z + 0.16 + t * (bridgeLength - 0.32);
+        pushBridgePart(sx * (BRIDGE_HALF_WIDTH - 0.05), BRIDGE_DECK_TOP + 0.47, z, 0.1, 0.94, 0.1);
+      }
+      pushBridgePart(
+        sx * (BRIDGE_HALF_WIDTH - 0.05), BRIDGE_DECK_TOP + 0.94, bridgeCenterZ,
+        0.09, 0.09, bridgeLength
+      );
+      pushBridgePart(
+        sx * (BRIDGE_HALF_WIDTH - 0.05), BRIDGE_DECK_TOP + 0.56, bridgeCenterZ,
+        0.07, 0.07, bridgeLength
+      );
+      pushBridgePart(
+        sx * (BRIDGE_HALF_WIDTH - 0.05), BRIDGE_DECK_TOP + 0.1, bridgeCenterZ,
+        0.07, 0.12, bridgeLength
+      );
+    }
+
+    const bridgeFrame = new THREE.InstancedMesh(
+      unitBoxGeo,
+      bridgeDarkMat,
+      bridgeFrameParts.length
+    );
+    bridgeFrame.name = 'bridge-frame';
+    bridgeFrame.castShadow = true;
+    bridgeFrame.receiveShadow = true;
+    bridgeFrameParts.forEach((part, i) => {
+      bridgeDummy.position.set(part.x, part.y, part.z);
+      bridgeDummy.rotation.set(0, 0, 0);
+      bridgeDummy.scale.set(part.sx, part.sy, part.sz);
+      bridgeDummy.updateMatrix();
+      bridgeFrame.setMatrixAt(i, bridgeDummy.matrix);
+    });
+    bridgeFrame.instanceMatrix.needsUpdate = true;
+    bridgeGroup.add(bridgeFrame);
+
+    // ---------- 院门到桥头的踏步石：让“别墅 → 草地 → 木桥”连成一条动线 ----------
+    const approachPath = new THREE.InstancedMesh(
+      getRoundedBoxGeometry(0.95, 0.05, 0.5),
+      courtyardPathMat,
+      14
+    );
+    approachPath.name = 'approach-stepping-stones';
+    approachPath.receiveShadow = true;
+    approachPath.castShadow = false;
+
+    const approachDummy = new THREE.Object3D();
+    let approachIndex = 0;
+    for (let row = 0; row < 7; row++) {
+      for (let col = 0; col < 2; col++) {
+        approachDummy.position.set((col - 0.5) * 1.1, 0.03, 9.4 + row * 0.95);
+        approachDummy.rotation.y = ((row + col) % 2 === 0 ? 1 : -1) * 0.012;
+        approachDummy.updateMatrix();
+        approachPath.setMatrixAt(approachIndex++, approachDummy.matrix);
+      }
+    }
+    approachPath.instanceMatrix.needsUpdate = true;
+    scene.add(approachPath);
+
+    // ================= 生活化细节：中式庭院 / 河道 / 夜空 =================
+    // 统一原则：这些小物件全部 castShadow = false，不参与阴影 pass；
+    // 竹节 / 竹叶 / 芦苇 / 孔明灯等重复物件走 InstancedMesh，避免几十个独立 Mesh 拉高 draw call。
+    const LIFE = CONFIG.life;
+    const lifeRandom = makeRandom(20261202);
+
+    // ---------- 红灯笼：圆柱灯身 + 金色上下箍 + 吊绳 + 流苏 ----------
+    const lanternBodyGeo = new THREE.CylinderGeometry(0.19, 0.19, 0.34, 8);
+    const lanternRimGeo = new THREE.CylinderGeometry(0.215, 0.215, 0.035, 8);
+    const lanternTasselGeo = new THREE.ConeGeometry(0.045, 0.2, 6);
+    const lanternRopeGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.16, 3);
+
+    const lanternRedMat = new THREE.MeshStandardMaterial({
+      color: 0x4a0c08,
+      emissive: LIFE.lanternRed,
+      emissiveIntensity: 0.9, // 白天是哑光红灯笼；夜间 updateDayNight 推到 2.8，越过 Bloom 阈值
+      roughness: 0.62,
+      metalness: 0.02
+    });
+    const lanternGoldMat = new THREE.MeshStandardMaterial({
+      color: LIFE.lanternGold, roughness: 0.42, metalness: 0.55
+    });
+    const lanternTasselMat = new THREE.MeshStandardMaterial({
+      color: LIFE.lanternTassel, roughness: 0.8, metalness: 0.02
+    });
+    const lanternRopeMat = new THREE.MeshStandardMaterial({
+      color: 0x241a14, roughness: 0.95
+    });
+
+    // 灯笼柔光：白天关闭，夜里用一张叠加 Sprite 模拟红晕，避免把灯身自发光推到 ACES 泛白
+    function createLanternHaloTexture() {
+      const size = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(size / 2, size / 2, 2, size / 2, size / 2, size / 2);
+      grad.addColorStop(0, 'rgba(255,226,190,0.85)');
+      grad.addColorStop(0.2, 'rgba(255,126,78,0.48)');
+      grad.addColorStop(0.55, 'rgba(255,54,24,0.16)');
+      grad.addColorStop(1, 'rgba(255,30,10,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const lanternHaloMat = new THREE.SpriteMaterial({
+      map: createLanternHaloTexture(),
+      color: 0xff8f62,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      toneMapped: false,
+      opacity: 0
+    });
+    lanternHaloMat.visible = false;
+
+    function createRedLantern(x, y, z, scale = 1) {
+      const lantern = new THREE.Group();
+      lantern.position.set(x, y, z);
+      lantern.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(lanternBodyGeo, lanternRedMat);
+      lantern.add(body);
+
+      for (const sy of [-1, 1]) {
+        const rim = new THREE.Mesh(lanternRimGeo, lanternGoldMat);
+        rim.position.y = sy * 0.185;
+        lantern.add(rim);
+      }
+
+      const rope = new THREE.Mesh(lanternRopeGeo, lanternRopeMat);
+      rope.position.y = 0.29;
+      lantern.add(rope);
+
+      const tassel = new THREE.Mesh(lanternTasselGeo, lanternTasselMat);
+      tassel.position.y = -0.285;
+      tassel.rotation.x = Math.PI; // 尖端朝下
+      lantern.add(tassel);
+
+      const halo = new THREE.Sprite(lanternHaloMat);
+      halo.position.y = 0.02;
+      halo.scale.set(1.6, 1.6, 1);
+      halo.renderOrder = 6;
+      lantern.add(halo);
+
+      lantern.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.castShadow = false;
+        obj.receiveShadow = false;
+      });
+      return lantern;
+    }
+
+    const lanternGroups = { porch: null, bridge: null };
+
+    function addLanterns() {
+      // 一楼门廊两侧：挂在一层屋檐下，跟随「只看某层」剖切一起隐藏
+      const porchGroup = new THREE.Group();
+      porchGroup.name = 'porch-lanterns';
+      floorGroups[0].add(porchGroup);
+      for (const sx of [-1, 1]) {
+        porchGroup.add(createRedLantern(sx * 3.02, 2.62, 4.02, 1.0));
+      }
+
+      // 木桥两头：各立一根小木柱，挑臂向外伸，挂一盏红灯笼
+      const bridgeLanternGroup = new THREE.Group();
+      bridgeLanternGroup.name = 'bridge-lanterns';
+      bridgeGroup.add(bridgeLanternGroup);
+
+      const postGeo = getRoundedBoxGeometry(0.1, 1.95, 0.1);
+      const armGeo = getRoundedBoxGeometry(0.5, 0.07, 0.07);
+      for (const z of [BRIDGE_START_Z - 0.06, BRIDGE_END_Z + 0.06]) {
+        for (const sx of [-1, 1]) {
+          const postX = sx * (BRIDGE_HALF_WIDTH + 0.18);
+
+          const post = new THREE.Mesh(postGeo, bridgeDarkMat);
+          post.position.set(postX, 0.975, z);
+          post.castShadow = false;
+          post.receiveShadow = false;
+          bridgeLanternGroup.add(post);
+
+          const arm = new THREE.Mesh(armGeo, bridgeDarkMat);
+          arm.position.set(postX + sx * 0.22, 1.9, z);
+          arm.castShadow = false;
+          arm.receiveShadow = false;
+          bridgeLanternGroup.add(arm);
+
+          bridgeLanternGroup.add(createRedLantern(postX + sx * 0.42, 1.6, z, 0.9));
+        }
+      }
+
+      lanternGroups.porch = porchGroup;
+      lanternGroups.bridge = bridgeLanternGroup;
+      return lanternGroups;
+    }
+
+    // ---------- 石桌石凳：别墅左侧草坪上的灰色圆柱组合 ----------
+    const STONE_TABLE_X = -5.8;
+    const STONE_TABLE_Z = -0.3;
+    const STONE_TABLE_CLEARANCE = 2.2; // 草地散布时避开的半径
+    const BAMBOO_GROVE_X = 6.95;
+    const BAMBOO_GROVE_Z = -7.05;
+    const BAMBOO_CLEARANCE = 1.7;
+
+    function addStoneTableSet() {
+      const group = new THREE.Group();
+      group.name = 'stone-table-set';
+      group.position.set(STONE_TABLE_X, 0, STONE_TABLE_Z);
+      courtyard.add(group);
+
+      const stoneMat = new THREE.MeshStandardMaterial({
+        color: LIFE.stone, roughness: 0.96, metalness: 0.02, flatShading: true
+      });
+      const stoneDarkMat = new THREE.MeshStandardMaterial({
+        color: LIFE.stoneDark, roughness: 0.98, metalness: 0.01, flatShading: true
+      });
+
+      const tableTop = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.82, 0.78, 0.09, 12),
+        stoneMat
+      );
+      tableTop.position.y = 0.74;
+      group.add(tableTop);
+
+      const tableNeck = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.25, 0.66, 8),
+        stoneDarkMat
+      );
+      tableNeck.position.y = 0.37;
+      group.add(tableNeck);
+
+      const tableBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.44, 0.48, 0.07, 10),
+        stoneMat
+      );
+      tableBase.position.y = 0.035;
+      group.add(tableBase);
+
+      // 四个小石凳：鼓形圆柱，围绕石桌均匀摆放
+      const stoolGeo = new THREE.CylinderGeometry(0.23, 0.27, 0.36, 8);
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        const stool = new THREE.Mesh(stoolGeo, stoneMat);
+        stool.position.set(Math.cos(angle) * 1.35, 0.18, Math.sin(angle) * 1.35);
+        group.add(stool);
+      }
+
+      group.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.castShadow = false;   // 小物件不参与阴影 pass
+        obj.receiveShadow = true; // 仍接受树影 / 屋檐影
+      });
+      return group;
+    }
+
+    // ---------- 竹林：竹节用 InstancedMesh，竹叶用十字交叉面片 ----------
+    function addBambooGrove() {
+      const group = new THREE.Group();
+      group.name = 'bamboo-grove';
+      group.position.set(BAMBOO_GROVE_X, 0, BAMBOO_GROVE_Z);
+      courtyard.add(group);
+
+      const stalkCount = CONFIG.lifeCounts.bamboo;
+      const culmGeo = new THREE.CylinderGeometry(1, 1.06, 1, 5);
+      culmGeo.translate(0, 0.5, 0); // 原点移到底部，方便按节点向上叠加
+      const ringGeo = new THREE.CylinderGeometry(1, 1, 1, 5);
+
+      // 低多边形竹叶：两头尖的菱形叶片（4 顶点 / 2 三角），沿 +X 伸出
+      function createBambooLeafGeometry() {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute([
+          0, 0, 0,
+          0.17, 0.062, 0,
+          0.5, 0.012, 0.006,
+          0.17, -0.052, 0
+        ], 3));
+        geo.setIndex([0, 1, 2, 0, 2, 3]);
+        geo.computeVertexNormals();
+        return geo;
+      }
+      const leafA = createBambooLeafGeometry();
+      const leafB = leafA.clone();
+      leafB.rotateX(Math.PI / 2);
+      const leafGeo = mergeGeometries([leafA, leafB]);
+      leafA.dispose();
+      leafB.dispose();
+
+      const culmMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 0.86, metalness: 0.02
+      });
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: LIFE.bambooNode, roughness: 0.9, metalness: 0.01
+      });
+      const leafMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 0.82, metalness: 0, side: THREE.DoubleSide
+      });
+
+      const culmMatrices = [];
+      const ringMatrices = [];
+      const leafMatrices = [];
+      const culmColors = [];
+      const leafColors = [];
+      const culmTones = [
+        new THREE.Color(LIFE.bambooCulm),
+        new THREE.Color(0x4f7a38),
+        new THREE.Color(0x6f9d4c)
+      ];
+      const leafTones = [
+        new THREE.Color(LIFE.bambooLeaf),
+        new THREE.Color(0x7fbc5b),
+        new THREE.Color(0x5c9440)
+      ];
+
+      const dummy = new THREE.Object3D();
+      const offset = new THREE.Vector3();
+      const stalkQuat = new THREE.Quaternion();
+      const leafQuat = new THREE.Quaternion();
+      const euler = new THREE.Euler();
+
+      for (let i = 0; i < stalkCount; i++) {
+        const angle = lifeRandom() * Math.PI * 2;
+        const radius = Math.sqrt(lifeRandom()) * 1.15;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const height = 1.8 + lifeRandom() * 1.9;         // 1.8~3.7m 高
+        const thickness = 0.028 + lifeRandom() * 0.014;  // 极细竹竿
+        const segments = 4 + Math.floor(lifeRandom() * 2); // 4~5 节
+        const segH = height / segments;
+
+        euler.set(
+          (lifeRandom() - 0.5) * 0.16,
+          lifeRandom() * Math.PI * 2,
+          (lifeRandom() - 0.5) * 0.16
+        );
+        stalkQuat.setFromEuler(euler);
+        const culmColor = culmTones[i % culmTones.length];
+
+        for (let s = 0; s < segments; s++) {
+          offset.set(0, s * segH, 0).applyQuaternion(stalkQuat);
+          dummy.position.set(x + offset.x, offset.y, z + offset.z);
+          dummy.quaternion.copy(stalkQuat);
+          dummy.scale.set(thickness, segH, thickness);
+          dummy.updateMatrix();
+          culmMatrices.push(dummy.matrix.clone());
+          culmColors.push(culmColor);
+
+          // 竹节：略粗的深绿箍
+          offset.set(0, (s + 1) * segH, 0).applyQuaternion(stalkQuat);
+          dummy.position.set(x + offset.x, offset.y, z + offset.z);
+          dummy.quaternion.copy(stalkQuat);
+          dummy.scale.set(thickness * 1.22, 0.028, thickness * 1.22);
+          dummy.updateMatrix();
+          ringMatrices.push(dummy.matrix.clone());
+        }
+
+        // 竹叶：每根 5 簇十字叶片，集中在竹梢并带自然倾角
+        for (let l = 0; l < 5; l++) {
+          const leafY = height * (0.6 + l * 0.095);
+          offset.set(0, leafY, 0).applyQuaternion(stalkQuat);
+          euler.set(
+            (lifeRandom() - 0.5) * 0.9,
+            lifeRandom() * Math.PI * 2,
+            (lifeRandom() - 0.5) * 0.55
+          );
+          leafQuat.setFromEuler(euler);
+          dummy.position.set(x + offset.x, offset.y, z + offset.z);
+          dummy.quaternion.copy(stalkQuat).multiply(leafQuat);
+          dummy.scale.setScalar(0.8 + lifeRandom() * 0.5);
+          dummy.updateMatrix();
+          leafMatrices.push(dummy.matrix.clone());
+          leafColors.push(leafTones[(i + l) % leafTones.length]);
+        }
+      }
+
+      const culmMesh = new THREE.InstancedMesh(culmGeo, culmMat, culmMatrices.length);
+      culmMesh.name = 'bamboo-culms';
+      culmMesh.castShadow = false;
+      culmMesh.receiveShadow = true;
+      culmMesh.frustumCulled = false;
+      culmMatrices.forEach((matrix, i) => {
+        culmMesh.setMatrixAt(i, matrix);
+        culmMesh.setColorAt(i, culmColors[i]);
+      });
+      culmMesh.instanceMatrix.needsUpdate = true;
+      if (culmMesh.instanceColor) culmMesh.instanceColor.needsUpdate = true;
+      group.add(culmMesh);
+
+      const ringMesh = new THREE.InstancedMesh(ringGeo, ringMat, ringMatrices.length);
+      ringMesh.name = 'bamboo-nodes';
+      ringMesh.castShadow = false;
+      ringMesh.receiveShadow = true;
+      ringMesh.frustumCulled = false;
+      ringMatrices.forEach((matrix, i) => ringMesh.setMatrixAt(i, matrix));
+      ringMesh.instanceMatrix.needsUpdate = true;
+      group.add(ringMesh);
+
+      const leafMesh = new THREE.InstancedMesh(leafGeo, leafMat, leafMatrices.length);
+      leafMesh.name = 'bamboo-leaves';
+      leafMesh.castShadow = false;
+      leafMesh.receiveShadow = true;
+      leafMesh.frustumCulled = false;
+      leafMatrices.forEach((matrix, i) => {
+        leafMesh.setMatrixAt(i, matrix);
+        leafMesh.setColorAt(i, leafColors[i]);
+      });
+      leafMesh.instanceMatrix.needsUpdate = true;
+      if (leafMesh.instanceColor) leafMesh.instanceColor.needsUpdate = true;
+      group.add(leafMesh);
+
+      return group;
+    }
+
+    // ---------- 乌篷船：半潜艇身 + 半圆篷 + 船头小红灯笼 ----------
+    function addBoat() {
+      const group = new THREE.Group();
+      group.name = 'wupeng-boat';
+      group.position.set(8.6, 0.02, RIVER_CENTER_Z + 0.25);
+      group.rotation.y = -0.08;
+      scene.add(group);
+
+      const hullMat = new THREE.MeshStandardMaterial({
+        color: LIFE.boatHull, roughness: 0.86, metalness: 0.04
+      });
+      const boatTrimMat = new THREE.MeshStandardMaterial({
+        color: LIFE.boatTrim, roughness: 0.78, metalness: 0.05
+      });
+      const canopyMat = new THREE.MeshStandardMaterial({
+        color: LIFE.boatCanopy, roughness: 0.9, metalness: 0.03, side: THREE.DoubleSide
+      });
+
+      // 拉长的低面数胶囊体做船身，压扁后下半部分浸入水中
+      const hullGeo = new THREE.CapsuleGeometry(0.55, 1.9, 4, 8);
+      hullGeo.rotateZ(Math.PI / 2);
+      const hull = new THREE.Mesh(hullGeo, hullMat);
+      hull.scale.set(1, 0.62, 0.84);
+      hull.position.y = 0.24;
+      group.add(hull);
+
+      // 船底木板 + 两道坐板
+      const floor = new THREE.Mesh(getRoundedBoxGeometry(1.9, 0.05, 0.5), boatTrimMat);
+      floor.position.y = 0.42;
+      group.add(floor);
+      for (const bx of [-0.58, 0.58]) {
+        const bench = new THREE.Mesh(getRoundedBoxGeometry(0.2, 0.06, 0.56), boatTrimMat);
+        bench.position.set(bx, 0.5, 0);
+        group.add(bench);
+      }
+
+      // 乌篷：半圆柱开口朝下
+      const canopyGeo = new THREE.CylinderGeometry(0.55, 0.55, 1.35, 8, 1, true, 0, Math.PI);
+      canopyGeo.rotateZ(Math.PI / 2);
+      const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+      canopy.position.set(-0.12, 0.55, 0);
+      group.add(canopy);
+
+      // 三道竹篾拱肋
+      const hoopGeo = new THREE.TorusGeometry(0.56, 0.022, 4, 8, Math.PI);
+      hoopGeo.rotateY(Math.PI / 2);
+      for (const hx of [-0.72, -0.12, 0.48]) {
+        const hoop = new THREE.Mesh(hoopGeo, boatTrimMat);
+        hoop.position.set(hx, 0.55, 0);
+        group.add(hoop);
+      }
+
+      // 船舷压条
+      for (const sz of [-1, 1]) {
+        const rail = new THREE.Mesh(getRoundedBoxGeometry(2.25, 0.06, 0.05), boatTrimMat);
+        rail.position.set(0, 0.53, sz * 0.44);
+        group.add(rail);
+      }
+
+      // 船头一盏小红灯笼，夜里和桥头灯笼一起泛红晕
+      group.add(createRedLantern(1.02, 0.9, 0, 0.62));
+
+      group.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.castShadow = false;
+        obj.receiveShadow = true;
+      });
+
+      return { group, homeY: group.position.y, baseYaw: group.rotation.y };
+    }
+
+    // ---------- 芦苇丛：两根 InstancedMesh（细茎 + 棕色穗），随风摇摆 ----------
+    function addReeds() {
+      const count = CONFIG.lifeCounts.reeds;
+      const stemGeo = new THREE.CylinderGeometry(0.008, 0.018, 1, 4);
+      stemGeo.translate(0, 0.5, 0); // 原点在根部，绕根部摆动
+      const headGeo = new THREE.CylinderGeometry(0.028, 0.012, 0.24, 4);
+
+      const stemMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 0.9, metalness: 0
+      });
+      const headMat = new THREE.MeshStandardMaterial({
+        color: LIFE.reedHead, roughness: 0.95, metalness: 0
+      });
+
+      const stemMesh = new THREE.InstancedMesh(stemGeo, stemMat, count);
+      const headMesh = new THREE.InstancedMesh(headGeo, headMat, count);
+      stemMesh.name = 'reeds-stems';
+      headMesh.name = 'reeds-heads';
+      for (const mesh of [stemMesh, headMesh]) {
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.frustumCulled = false;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+        scene.add(mesh);
+      }
+
+      const stemTones = [
+        new THREE.Color(LIFE.reedStem),
+        new THREE.Color(0x8a9660),
+        new THREE.Color(0xa9b37a)
+      ];
+      const reeds = [];
+
+      for (let i = 0; i < count; i++) {
+        const side = i % 2 === 0 ? -1 : 1;
+        let x = 0;
+        for (let attempt = 0; attempt < 12; attempt++) {
+          x = (lifeRandom() - 0.5) * 2 * (RIVER_HALF_LENGTH - 7);
+          if (Math.abs(x) > BRIDGE_HALF_WIDTH + 2.2) break; // 让开木桥
+        }
+
+        reeds.push({
+          x,
+          z: RIVER_CENTER_Z + side * (RIVER_HALF_WIDTH + 0.12 + lifeRandom() * 0.95),
+          height: 0.9 + lifeRandom() * 1.15,
+          width: 0.8 + lifeRandom() * 0.5,
+          yaw: lifeRandom() * Math.PI * 2,
+          leanX: (lifeRandom() - 0.5) * 0.18,
+          leanZ: (lifeRandom() - 0.5) * 0.18,
+          phase: lifeRandom() * Math.PI * 2,
+          speed: 0.45 + lifeRandom() * 0.55,
+          headScale: 0.8 + lifeRandom() * 0.4
+        });
+        stemMesh.setColorAt(i, stemTones[i % stemTones.length]);
+      }
+      if (stemMesh.instanceColor) stemMesh.instanceColor.needsUpdate = true;
+
+      return {
+        stemMesh,
+        headMesh,
+        reeds,
+        dummy: new THREE.Object3D(),
+        headDummy: new THREE.Object3D(),
+        topOffset: new THREE.Vector3()
+      };
+    }
+
+    // time 来自 clock.elapsedTime；每帧只更新实例矩阵，不新增 draw call
+    function updateReeds(state, time) {
+      const { stemMesh, headMesh, reeds, dummy, headDummy, topOffset } = state;
+
+      for (let i = 0; i < reeds.length; i++) {
+        const reed = reeds[i];
+        const sway = Math.sin(time * reed.speed + reed.phase);
+
+        dummy.position.set(reed.x, 0, reed.z);
+        dummy.rotation.set(
+          reed.leanX + sway * 0.05,
+          reed.yaw,
+          reed.leanZ + Math.cos(time * reed.speed * 0.83 + reed.phase) * 0.035
+        );
+        dummy.scale.set(reed.width, reed.height, reed.width);
+        dummy.updateMatrix();
+        stemMesh.setMatrixAt(i, dummy.matrix);
+
+        // 穗子跟着茎尖一起摆：先求旋转后的茎顶偏移，再放到穗子中心
+        topOffset.set(0, reed.height, 0).applyQuaternion(dummy.quaternion);
+        headDummy.position.set(reed.x + topOffset.x, topOffset.y, reed.z + topOffset.z);
+        headDummy.rotation.copy(dummy.rotation);
+        headDummy.scale.setScalar(reed.headScale);
+        headDummy.updateMatrix();
+        headMesh.setMatrixAt(i, headDummy.matrix);
+      }
+
+      stemMesh.instanceMatrix.needsUpdate = true;
+      headMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // ---------- 夜空孔明灯：暖黄自发光纸罩 + 一点火芯，夜里缓慢升空 ----------
+    function addSkyLanterns() {
+      const count = CONFIG.lifeCounts.skyLanterns;
+      const group = new THREE.Group();
+      group.name = 'sky-lanterns';
+      group.visible = false; // 白昼不显示，updateDayNight 之后由 updateSkyLanterns 打开
+      scene.add(group);
+
+      const bodyGeo = new THREE.CylinderGeometry(0.23, 0.16, 0.5, 7);
+      const paperMat = new THREE.MeshStandardMaterial({
+        color: 0x3a220c,
+        emissive: LIFE.skyLanternPaper,
+        emissiveIntensity: 1.5, // 刚过 Bloom 阈值，夜空中是一团柔和的暖黄
+        roughness: 0.9,
+        metalness: 0
+      });
+      const bodyMesh = new THREE.InstancedMesh(bodyGeo, paperMat, count);
+      bodyMesh.name = 'sky-lantern-papers';
+      bodyMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      bodyMesh.frustumCulled = false;
+      bodyMesh.castShadow = false;
+      bodyMesh.receiveShadow = false;
+      group.add(bodyMesh);
+
+      const flameGeo = new THREE.SphereGeometry(0.055, 6, 4);
+      const flameMat = new THREE.MeshBasicMaterial({ color: LIFE.skyLanternFlame });
+      const flameMesh = new THREE.InstancedMesh(flameGeo, flameMat, count);
+      flameMesh.name = 'sky-lantern-flames';
+      flameMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      flameMesh.frustumCulled = false;
+      flameMesh.castShadow = false;
+      flameMesh.receiveShadow = false;
+      group.add(flameMesh);
+
+      const data = [];
+      for (let i = 0; i < count; i++) {
+        // 起点避开别墅正上方，免得刚从地面升起时穿过屋顶 / 屋檐
+        let x = 0;
+        let z = 0;
+        for (let attempt = 0; attempt < 12; attempt++) {
+          x = (lifeRandom() - 0.5) * 32;
+          z = (lifeRandom() - 0.5) * 34 + 4;
+          if (Math.abs(x) > 5.5 || Math.abs(z) > 5.5) break;
+        }
+
+        data.push({
+          // 横向铺满整个院子 / 河道上空；初始高度错开，开灯时已经有几盏在半空
+          x,
+          z,
+          y: 0.8 + lifeRandom() * 15,
+          rise: 0.22 + lifeRandom() * 0.24,      // m/s，缓慢上升
+          swayAmp: 0.28 + lifeRandom() * 0.7,
+          speed: 0.32 + lifeRandom() * 0.45,
+          phase: lifeRandom() * Math.PI * 2,
+          scale: 0.75 + lifeRandom() * 0.5
+        });
+      }
+
+      return {
+        group,
+        bodyMesh,
+        flameMesh,
+        data,
+        dummy: new THREE.Object3D(),
+        flameDummy: new THREE.Object3D()
+      };
+    }
+
+    function updateSkyLanterns(state, dt, time, nightFactor) {
+      const visible = nightFactor > 0.45;
+      state.group.visible = visible;
+      if (!visible) return; // 白天整组隐藏，连带跳过所有实例矩阵计算
+
+      const { bodyMesh, flameMesh, data, dummy, flameDummy } = state;
+      for (let i = 0; i < data.length; i++) {
+        const lamp = data[i];
+        lamp.y += lamp.rise * dt;
+        if (lamp.y > 24) lamp.y = 0.5; // 升到高空后回到地面附近，循环重来
+
+        const swayX = Math.sin(time * lamp.speed + lamp.phase) * lamp.swayAmp;
+        const swayZ = Math.cos(time * lamp.speed * 0.77 + lamp.phase) * lamp.swayAmp * 0.65;
+
+        dummy.position.set(lamp.x + swayX, lamp.y, lamp.z + swayZ);
+        dummy.rotation.set(
+          Math.cos(time * lamp.speed * 0.63 + lamp.phase) * 0.06,
+          lamp.phase + time * 0.05,
+          Math.sin(time * lamp.speed + lamp.phase) * 0.08
+        );
+        dummy.scale.setScalar(lamp.scale);
+        dummy.updateMatrix();
+        bodyMesh.setMatrixAt(i, dummy.matrix);
+
+        // 火芯在纸罩正下方，亮度做轻微呼吸
+        flameDummy.position.set(lamp.x + swayX, lamp.y - 0.26 * lamp.scale, lamp.z + swayZ);
+        flameDummy.rotation.copy(dummy.rotation);
+        flameDummy.scale.setScalar(lamp.scale * (1 + Math.sin(time * 7 + lamp.phase) * 0.12));
+        flameDummy.updateMatrix();
+        flameMesh.setMatrixAt(i, flameDummy.matrix);
+      }
+
+      bodyMesh.instanceMatrix.needsUpdate = true;
+      flameMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // ---------- 一次性挂载生活化细节 ----------
+    // 放在场景骨架（别墅 / 庭院 / 河道 / 木桥）搭好之后，函数声明已全部就绪
+    const lifeDetails = {
+      lanterns: addLanterns(),
+      stoneTable: addStoneTableSet(),
+      bamboo: addBambooGrove(),
+      boat: addBoat(),
+      reeds: addReeds(),
+      skyLanterns: addSkyLanterns()
+    };
+    updateReeds(lifeDetails.reeds, 0); // 先写一次初始矩阵，第一帧之前芦苇就位
+
+    // ---------- 高性能草地：GRASS_COUNT 个草实例，单个 InstancedMesh ----------
+    // 每个实例 6 片两段式叶片（18 个三角面），10 个实例聚成一簇；
+    // 4800 个实例约 8.6 万个面，但只有 1 个 draw call，远轻于几千个独立 Mesh。
+    const grassSpots = [];
+    const GRASS_TONES = [0x5a8a45, 0x6b9b4f, 0x7cab5b, 0x8dbb6a]; // 中绿 → 浅绿，贴近草坪底色
+
+    function pushGrassSpot(x, z, minH, maxH, minW = 1.0, maxW = 1.8, tone = null) {
+      grassSpots.push({
+        x, z,
+        height: minH + gardenDetailRandom() * (maxH - minH),
+        width: minW + gardenDetailRandom() * (maxW - minW),
+        yaw: gardenDetailRandom() * Math.PI * 2,
+        tiltX: (gardenDetailRandom() - 0.5) * 0.22,
+        tiltZ: (gardenDetailRandom() - 0.5) * 0.22,
+        tone: tone ?? GRASS_TONES[Math.floor(gardenDetailRandom() * GRASS_TONES.length)]
+      });
+    }
+
+    // 一簇 = GRASS_CLUMP_SIZE 个草实例，围绕同一个中心小范围聚集；
+    // 同一簇共用颜色，远看是一块蓬松的草团，而不是均匀撒开的“芝麻”。
+    function pushGrassClump(
+      cx, cz, count, minH, maxH,
+      minW = 1.0, maxW = 1.8, radius = GRASS_CLUMP_RADIUS
+    ) {
+      const tone = GRASS_TONES[Math.floor(gardenDetailRandom() * GRASS_TONES.length)];
+      for (let i = 0; i < count; i++) {
+        const angle = gardenDetailRandom() * Math.PI * 2;
+        const r = Math.sqrt(gardenDetailRandom()) * radius;
+        pushGrassSpot(
+          cx + Math.cos(angle) * r,
+          cz + Math.sin(angle) * r,
+          minH, maxH, minW, maxW, tone
+        );
+      }
+    }
+
+    // 数量按“簇”分配：庭院 38% / 河岸 24% / 每棵树 2 簇 / 其余外围草地，
+    // 保持总量约等于 GRASS_COUNT，避免各段向上取整后草地数量虚高。
+    const grassClumpTotal = Math.round(GRASS_COUNT / GRASS_CLUMP_SIZE);
+    const courtyardClumpCount = Math.round(grassClumpTotal * 0.38);
+    const bankClumpCount = Math.round(grassClumpTotal * 0.24);
+    const treeClumpCount = TREE_LAYOUT.length * 2;
+    const meadowClumpCount = Math.max(
+      0,
+      grassClumpTotal - courtyardClumpCount - bankClumpCount - treeClumpCount
+    );
+
+    // 1) 别墅周围 / 庭院草坪：避开台基、石板路与四角灌木
+    for (let i = 0; i < courtyardClumpCount; i++) {
+      let x = COURTYARD_HALF - 0.8;
+      let z = COURTYARD_HALF - 0.8;
+      for (let attempt = 0; attempt < 16; attempt++) {
+        const cx = (gardenDetailRandom() - 0.5) * (COURTYARD_HALF * 2 - 0.9);
+        const cz = (gardenDetailRandom() - 0.5) * (COURTYARD_HALF * 2 - 0.9);
+        if (Math.abs(cx) < 4.15 && Math.abs(cz) < 4.15) continue;          // 别墅台基
+        if (Math.abs(cx) < 1.5 && cz > pathStartZ - 0.4) continue;          // 入户石径
+        if (Math.hypot(cx - STONE_TABLE_X, cz - STONE_TABLE_Z) < STONE_TABLE_CLEARANCE) continue; // 石桌石凳
+        if (Math.hypot(cx - BAMBOO_GROVE_X, cz - BAMBOO_GROVE_Z) < BAMBOO_CLEARANCE) continue;   // 竹林根部
+        let inBush = false;
+        for (const [bx, bz] of COURTYARD_BUSH_SPOTS) {
+          if (Math.hypot(cx - bx, cz - bz) < 1.05) { inBush = true; break; }
+        }
+        if (inBush) continue;
+        x = cx;
+        z = cz;
+        break;
+      }
+      // 院内草坪：修剪得更短，但仍以 10 个实例为一簇，不再是一根一根的芝麻
+      pushGrassClump(x, z, GRASS_CLUMP_SIZE, 0.16, 0.32, 1.0, 1.6, 0.35);
+    }
+
+    // 2) 河流两岸：贴近水边成簇生长，草更高更蓬松
+    for (let i = 0; i < bankClumpCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      let x = 0;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        x = (gardenDetailRandom() - 0.5) * 2 * 32;
+        if (Math.abs(x) > BRIDGE_HALF_WIDTH + 0.7) break; // 让开木桥
+      }
+      const margin = 0.15 + gardenDetailRandom() * 1.25;
+      const z = RIVER_CENTER_Z + side * (RIVER_HALF_WIDTH + margin);
+      pushGrassClump(x, z, GRASS_CLUMP_SIZE, 0.3, 0.55, 1.1, 1.8, 0.3);
+    }
+
+    // 3) 树林下方：每棵树底部放 2 簇草，树不再是“插在空地上”
+    for (const [tx, tz] of TREE_LAYOUT) {
+      for (let c = 0; c < treeClumpCount / TREE_LAYOUT.length; c++) {
+        const angle = gardenDetailRandom() * Math.PI * 2;
+        const radius = 0.7 + gardenDetailRandom() * 0.55;
+        pushGrassClump(
+          tx + Math.cos(angle) * radius,
+          tz + Math.sin(angle) * radius,
+          GRASS_CLUMP_SIZE,
+          0.26, 0.5, 1.0, 1.7, 0.34
+        );
+      }
+    }
+
+    // 4) 外围草地：先撒若干“草丛中心”，每个中心再放 3~4 簇（10 实例 / 簇）
+    const meadowPatchCount = Math.max(36, Math.round(meadowClumpCount / 4));
+    const meadowPatches = [];
+    let meadowPatchGuard = 0;
+    while (meadowPatches.length < meadowPatchCount && meadowPatchGuard++ < meadowPatchCount * 30) {
+      const cx = (gardenDetailRandom() - 0.5) * 2 * 33;
+      const cz = (gardenDetailRandom() - 0.5) * 2 * 33;
+      const insideCourtyard =
+        Math.abs(cx) < COURTYARD_HALF + 1.2 && Math.abs(cz) < COURTYARD_HALF + 1.2;
+      const inRiver = Math.abs(cz - RIVER_CENTER_Z) < RIVER_HALF_WIDTH + 0.6;
+      const onBridge =
+        Math.abs(cx) < BRIDGE_HALF_WIDTH + 1.2 &&
+        cz > BRIDGE_START_Z - 1 && cz < BRIDGE_END_Z + 1;
+      if (insideCourtyard || inRiver || onBridge) continue;
+      meadowPatches.push([cx, cz]);
+    }
+    // 极端情况下兜底，避免下面的取模访问到空数组
+    if (meadowPatches.length === 0) meadowPatches.push([COURTYARD_HALF + 8, -COURTYARD_HALF - 8]);
+
+    for (let i = 0; i < meadowClumpCount; i++) {
+      const patch = meadowPatches[i % meadowPatches.length];
+      let x = patch[0];
+      let z = patch[1];
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const angle = gardenDetailRandom() * Math.PI * 2;
+        const radius = 0.3 + Math.sqrt(gardenDetailRandom()) * 1.9;
+        const cx = patch[0] + Math.cos(angle) * radius;
+        const cz = patch[1] + Math.sin(angle) * radius;
+        const inVilla = Math.abs(cx) < 4.6 && Math.abs(cz) < 4.6;
+        const inRiver = Math.abs(cz - RIVER_CENTER_Z) < RIVER_HALF_WIDTH + 0.7;
+        const onBridge =
+          Math.abs(cx) < BRIDGE_HALF_WIDTH + 0.8 &&
+          cz > BRIDGE_START_Z - 0.4 && cz < BRIDGE_END_Z + 0.4;
+        if (!inVilla && !inRiver && !onBridge) {
+          x = cx;
+          z = cz;
+          break;
+        }
+      }
+      pushGrassClump(x, z, GRASS_CLUMP_SIZE, 0.24, 0.48, 1.1, 1.85, 0.36);
+    }
+
+    // 草叶几何：每丛 6 片两段式叶片（下宽上尖、向外微弯），
+    // 叶片比旧版宽约 1.5 倍；每片 3 个三角形，一丛 18 个三角形，仍然只有 1 个 draw call。
+    function createGrassTuftGeometry() {
+      // w 是半宽：实际叶宽 = 2 × w = 0.058~0.078，细叶才不会像小灌木
+      const blades = [
+        { ox: 0.0, oz: 0.0, yaw: 0.4, h: 1.0, w: 0.039 },
+        { ox: 0.09, oz: 0.05, yaw: 1.7, h: 0.82, w: 0.036 },
+        { ox: -0.08, oz: 0.06, yaw: 2.9, h: 0.9, w: 0.034 },
+        { ox: 0.03, oz: -0.08, yaw: 4.3, h: 0.74, w: 0.031 },
+        { ox: -0.04, oz: -0.02, yaw: 5.4, h: 0.88, w: 0.035 },
+        { ox: 0.1, oz: -0.06, yaw: 3.6, h: 0.66, w: 0.029 }
+      ];
+      const positions = [];
+      const indices = [];
+
+      for (const blade of blades) {
+        const c = Math.cos(blade.yaw);
+        const s = Math.sin(blade.yaw);
+        const base = positions.length / 3;
+        // 局部坐标：x 为叶宽方向，z 为叶片外弯方向，绕 Y 旋转后摆进草丛
+        const push = (lx, y, lz) => {
+          positions.push(
+            blade.ox + lx * c + lz * s,
+            y * blade.h,
+            blade.oz - lx * s + lz * c
+          );
+        };
+        push(-blade.w, 0, 0);                            // 0 左下
+        push(blade.w, 0, 0);                             // 1 右下
+        push(-blade.w * 0.62, 0.55, blade.w * 0.5);      // 2 中左
+        push(blade.w * 0.62, 0.55, blade.w * 0.5);       // 3 中右
+        push(blade.w * 0.06, 1, blade.w * 1.9);          // 4 叶尖（略向外弯）
+        indices.push(
+          base, base + 1, base + 3,
+          base, base + 3, base + 2,
+          base + 2, base + 3, base + 4
+        );
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+    const grassGeo = createGrassTuftGeometry();
+
+    const grassMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,        // 基色保持白色，真正的绿色来自 instanceColor（昼夜再统一染色）
+      roughness: 0.95,
+      metalness: 0,
+      side: THREE.DoubleSide // 从背面看草叶也有颜色，不会出现黑面
+    });
+
+    // ---------- 草地风场：顶点着色器位移 ----------
+    // 4800 个实例仍然只有 1 个 draw call，只在顶点阶段根据叶片高度和世界位置做正弦弯曲；
+    // 根部（y=0）完全不动，叶尖（y=1）摆幅最大，看起来像一阵风从草地掠过。
+    const grassWindUniforms = {
+      uTime: { value: 0 },
+      uStrength: { value: CONFIG.grass.windStrength }
+    };
+    grassMat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = grassWindUniforms.uTime;
+      shader.uniforms.uStrength = grassWindUniforms.uStrength;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        uniform float uTime;
+        uniform float uStrength;`
+      );
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          vec3 grassOrigin = vec3(instanceMatrix[3].x, instanceMatrix[3].y, instanceMatrix[3].z);
+        #else
+          vec3 grassOrigin = vec3(0.0);
+        #endif
+        float bladeMask = clamp(transformed.y, 0.0, 1.0);
+        float gust = sin(uTime * ${CONFIG.grass.windSpeed.toFixed(3)} + grassOrigin.x * 0.55 + grassOrigin.z * 0.47)
+                   + 0.55 * sin(uTime * ${(CONFIG.grass.windSpeed * 2.3).toFixed(3)} + grassOrigin.x * 1.7 + grassOrigin.z * 0.9);
+        float bend = gust * uStrength * bladeMask * bladeMask;
+        transformed.x += bend * 0.2;
+        transformed.z += bend * 0.12;`
+      );
+    };
+    // 同一份材质在程序缓存里保持唯一 key，避免热更新时复用旧 shader
+    grassMat.customProgramCacheKey = () => 'villa-grass-wind';
+
+    const grassMesh = new THREE.InstancedMesh(grassGeo, grassMat, grassSpots.length);
+    grassMesh.name = 'grass-field';
+    grassMesh.castShadow = false;    // 草不投影：4800 个实例投影太贵，性能优先
+    grassMesh.receiveShadow = true;  // 但草要接住别墅 / 树的影子，才不会像贴纸
+
+    const grassDummy = new THREE.Object3D();
+    const grassColor = new THREE.Color();
+    grassSpots.forEach((spot, i) => {
+      grassDummy.position.set(spot.x, 0.016, spot.z);
+      grassDummy.rotation.set(spot.tiltX, spot.yaw, spot.tiltZ);
+      grassDummy.scale.set(spot.width, spot.height, spot.width);
+      grassDummy.updateMatrix();
+      grassMesh.setMatrixAt(i, grassDummy.matrix);
+      grassMesh.setColorAt(i, grassColor.setHex(spot.tone));
+    });
+    grassMesh.instanceMatrix.needsUpdate = true;
+    if (grassMesh.instanceColor) grassMesh.instanceColor.needsUpdate = true;
+    // 实例分布很广，必须按实例矩阵重算包围球，否则视锥剔除会把整片草误剔掉
+    grassMesh.computeBoundingSphere?.();
+    scene.add(grassMesh);
+
+    // ---------- 灌木丛：别墅墙角 / 树底 / 草地边缘，低面数多面体 ----------
+    const shrubRandom = makeRandom(20261113);
+    const shrubSpots = [];
+    const SHRUB_TONES = [0x3f7a4d, 0x4a8b58, 0x356b45]; // 比树冠稍亮一点
+
+    function pushShrub(x, z, r) {
+      shrubSpots.push({
+        x, z,
+        r,
+        sy: r * (0.62 + shrubRandom() * 0.28),
+        yaw: shrubRandom() * Math.PI * 2,
+        tone: SHRUB_TONES[Math.floor(shrubRandom() * SHRUB_TONES.length)]
+      });
+    }
+
+    // 别墅四个墙角 + 每面墙的中间，紧贴台基外缘
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        pushShrub(sx * 4.05, sz * 4.05, 0.52 + shrubRandom() * 0.18);
+      }
+    }
+    for (const s of [-1, 1]) {
+      pushShrub(s * 4.05, 1.35, 0.36);
+      pushShrub(s * 4.05, -1.35, 0.36);
+      pushShrub(1.35, s * 4.05, 0.36);
+      pushShrub(-1.35, s * 4.05, 0.36);
+    }
+
+    // 每棵树底部 3 丛，弱化树干与地面的生硬接缝
+    for (const [tx, tz] of TREE_LAYOUT) {
+      for (let i = 0; i < 3; i++) {
+        const angle = shrubRandom() * Math.PI * 2;
+        const radius = 0.65 + shrubRandom() * 0.55;
+        pushShrub(
+          tx + Math.cos(angle) * radius,
+          tz + Math.sin(angle) * radius,
+          0.34 + shrubRandom() * 0.22
+        );
+      }
+    }
+
+    // 剩余数量撒在外围草地（避开庭院、河道、木桥与漫游走廊）
+    let shrubGuard = 0;
+    while (shrubSpots.length < SHRUB_COUNT && shrubGuard++ < SHRUB_COUNT * 24) {
+      const x = (shrubRandom() - 0.5) * 2 * 28;
+      const z = (shrubRandom() - 0.5) * 2 * 28;
+      const insideCourtyard =
+        Math.abs(x) < COURTYARD_HALF + 0.6 && Math.abs(z) < COURTYARD_HALF + 0.6;
+      const inRiver = Math.abs(z - RIVER_CENTER_Z) < RIVER_HALF_WIDTH + 0.6;
+      const inCorridor =
+        Math.abs(x) < 2.2 && z > COURTYARD_HALF && z < BRIDGE_END_Z + 2;
+      if (insideCourtyard || inRiver || inCorridor) continue;
+      pushShrub(x, z, 0.32 + shrubRandom() * 0.3);
+    }
+
+    const shrubGeo = new THREE.IcosahedronGeometry(1, 1);
+    const shrubMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, // 同样用 instanceColor 上色，昼夜由材质整体染色
+      roughness: 0.93,
+      metalness: 0,
+      flatShading: true
+    });
+    const shrubMesh = new THREE.InstancedMesh(shrubGeo, shrubMat, shrubSpots.length);
+    shrubMesh.name = 'shrub-field';
+    shrubMesh.castShadow = true;
+    shrubMesh.receiveShadow = true;
+
+    const shrubDummy = new THREE.Object3D();
+    const shrubColor = new THREE.Color();
+    shrubSpots.forEach((spot, i) => {
+      // 球心略低于半径：底部埋进草地，看起来是“长”出来的
+      shrubDummy.position.set(spot.x, spot.sy * 0.62, spot.z);
+      shrubDummy.rotation.set(0, spot.yaw, 0);
+      shrubDummy.scale.set(spot.r, spot.sy, spot.r);
+      shrubDummy.updateMatrix();
+      shrubMesh.setMatrixAt(i, shrubDummy.matrix);
+      shrubMesh.setColorAt(i, shrubColor.setHex(spot.tone));
+    });
+    shrubMesh.instanceMatrix.needsUpdate = true;
+    if (shrubMesh.instanceColor) shrubMesh.instanceColor.needsUpdate = true;
+    shrubMesh.computeBoundingSphere?.();
+    scene.add(shrubMesh);
+
+    // ---------- 石头：河流两岸 / 草地交界，十二面体随机缩放旋转 ----------
+    const stoneRandom = makeRandom(20261114);
+    const stoneSpots = [];
+    const STONE_TONES = [0xc8cbc4, 0xaeb2ad, 0x989d99, 0xd8d9d2]; // 灰白
+
+    function pushStone(x, z, r) {
+      stoneSpots.push({
+        x, z,
+        sx: r * (0.8 + stoneRandom() * 0.7),
+        sy: r * (0.55 + stoneRandom() * 0.55),
+        sz: r * (0.8 + stoneRandom() * 0.7),
+        rx: stoneRandom() * Math.PI,
+        ry: stoneRandom() * Math.PI * 2,
+        rz: stoneRandom() * Math.PI,
+        tone: STONE_TONES[Math.floor(stoneRandom() * STONE_TONES.length)]
+      });
+    }
+
+    // 60% 的石头贴着两岸水线摆放，10cm~40cm 高
+    const bankStoneCount = Math.round(STONE_COUNT * 0.6);
+    for (let i = 0; i < bankStoneCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      let x = 0;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        x = (stoneRandom() - 0.5) * 2 * 30;
+        if (Math.abs(x) > BRIDGE_HALF_WIDTH + 0.9) break; // 桥下不放石头
+      }
+      const z = RIVER_CENTER_Z + side * (RIVER_HALF_WIDTH - 0.15 + stoneRandom() * 0.75);
+      pushStone(x, z, 0.12 + stoneRandom() * 0.28);
+    }
+
+    // 其余零散分布在草地与河道之间
+    let stoneGuard = 0;
+    while (stoneSpots.length < STONE_COUNT && stoneGuard++ < STONE_COUNT * 24) {
+      const x = (stoneRandom() - 0.5) * 2 * 28;
+      const z = (stoneRandom() - 0.5) * 2 * 28;
+      const insideCourtyard =
+        Math.abs(x) < COURTYARD_HALF + 0.4 && Math.abs(z) < COURTYARD_HALF + 0.4;
+      const inRiver = Math.abs(z - RIVER_CENTER_Z) < RIVER_HALF_WIDTH + 0.1;
+      const onBridge =
+        Math.abs(x) < BRIDGE_HALF_WIDTH + 0.8 && z > BRIDGE_START_Z && z < BRIDGE_END_Z;
+      if (insideCourtyard || inRiver || onBridge) continue;
+      pushStone(x, z, 0.1 + stoneRandom() * 0.22);
+    }
+
+    const stoneGeo = new THREE.DodecahedronGeometry(1, 0);
+    const stoneMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.95,
+      metalness: 0.02,
+      flatShading: true
+    });
+    const stoneMesh = new THREE.InstancedMesh(stoneGeo, stoneMat, stoneSpots.length);
+    stoneMesh.name = 'stone-field';
+    stoneMesh.castShadow = true;
+    stoneMesh.receiveShadow = true;
+
+    const stoneDummy = new THREE.Object3D();
+    const stoneColor = new THREE.Color();
+    stoneSpots.forEach((spot, i) => {
+      stoneDummy.position.set(spot.x, spot.sy * 0.45, spot.z); // 半埋进地面
+      stoneDummy.rotation.set(spot.rx, spot.ry, spot.rz);
+      stoneDummy.scale.set(spot.sx, spot.sy, spot.sz);
+      stoneDummy.updateMatrix();
+      stoneMesh.setMatrixAt(i, stoneDummy.matrix);
+      stoneMesh.setColorAt(i, stoneColor.setHex(spot.tone));
+    });
+    stoneMesh.instanceMatrix.needsUpdate = true;
+    if (stoneMesh.instanceColor) stoneMesh.instanceColor.needsUpdate = true;
+    stoneMesh.computeBoundingSphere?.();
+    scene.add(stoneMesh);
+
+    // ================= 粒子系统：白天樱花 / 夜晚萤火虫与星空 =================
+
+    // 花瓣纹理：粉色渐变 + 顶部小缺口
+    function createPetalTexture() {
+      const size = 64;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const ctx = cv.getContext('2d');
+
+      const grad = ctx.createLinearGradient(0, 0, size, size);
+      grad.addColorStop(0, '#ffe6f0');
+      grad.addColorStop(0.55, '#f7b6cf');
+      grad.addColorStop(1, '#e58ab0');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(size / 2, size * 0.94);
+      ctx.bezierCurveTo(size * 0.06, size * 0.68, size * 0.1, size * 0.16, size * 0.5, size * 0.1);
+      ctx.bezierCurveTo(size * 0.9, size * 0.16, size * 0.94, size * 0.68, size / 2, size * 0.94);
+      ctx.closePath();
+      ctx.fill();
+
+      // 顶端花瓣缺口
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.moveTo(size * 0.5, 0);
+      ctx.lineTo(size * 0.41, size * 0.2);
+      ctx.lineTo(size * 0.59, size * 0.2);
+      ctx.closePath();
+      ctx.fill();
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    // 萤火虫 / 星星共用的柔光点纹理
+    function createGlowTexture() {
+      const size = 64;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const ctx = cv.getContext('2d');
+      const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.85)');
+      grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.28)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    class Particles {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = 'particles';
+        this.time = 0;
+        this.wind = new THREE.Vector2(0.55, 0.22);
+        this.random = makeRandom(90210);
+        this._dummy = new THREE.Object3D();
+
+        this._buildPetals();
+        this._buildNightLights();
+
+        scene.add(this.group);
+      }
+
+      _rand(min, max) {
+        return min + this.random() * (max - min);
+      }
+
+      // ---------- 樱花花瓣（InstancedMesh，逐片旋转 + 阵风漂移） ----------
+      _buildPetals() {
+        this.petalCount = 260;
+        this.petalMat = new THREE.MeshStandardMaterial({
+          map: createPetalTexture(),
+          transparent: true,
+          opacity: 1,
+          alphaTest: 0.12,
+          side: THREE.DoubleSide,
+          roughness: 0.78,
+          metalness: 0,
+          depthWrite: false
+        });
+        this.petals = new THREE.InstancedMesh(
+          new THREE.PlaneGeometry(1, 1),
+          this.petalMat,
+          this.petalCount
+        );
+        this.petals.name = 'cherry-petals';
+        this.petals.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.petals.frustumCulled = false;
+        this.petals.castShadow = false;
+        this.petals.receiveShadow = false;
+
+        this.petalData = [];
+        for (let i = 0; i < this.petalCount; i++) {
+          const petal = {};
+          this._respawnPetal(petal, true);
+          this.petalData.push(petal);
+          this._writePetalMatrix(i, petal);
+        }
+        this.petals.instanceMatrix.needsUpdate = true;
+        this.group.add(this.petals);
+      }
+
+      _respawnPetal(petal, initial) {
+        // 与落叶一致：不要生成在别墅正上方，否则会飘进室内挡住镜头
+        for (let attempt = 0; attempt < 8; attempt++) {
+          petal.x = this._rand(-13.5, 13.5);
+          petal.z = this._rand(-13.5, 13.5);
+          if (Math.abs(petal.x) > 4.6 || Math.abs(petal.z) > 4.6) break;
+        }
+        petal.y = initial ? this._rand(0.3, 13) : this._rand(11, 14);
+        petal.fall = this._rand(0.45, 0.95);
+        petal.swayPhase = this._rand(0, Math.PI * 2);
+        petal.swaySpeed = this._rand(0.7, 1.7);
+        petal.swayAmpX = this._rand(0.18, 0.55);
+        petal.swayAmpZ = this._rand(0.12, 0.4);
+        petal.rotX = this._rand(0, Math.PI * 2);
+        petal.rotY = this._rand(0, Math.PI * 2);
+        petal.rotZ = this._rand(0, Math.PI * 2);
+        petal.spinX = this._rand(-2.4, 2.4);
+        petal.spinY = this._rand(-1.8, 1.8);
+        petal.spinZ = this._rand(-2.0, 2.0);
+        petal.scale = this._rand(0.13, 0.26);
+      }
+
+      _writePetalMatrix(index, petal) {
+        this._dummy.position.set(petal.x, petal.y, petal.z);
+        this._dummy.rotation.set(petal.rotX, petal.rotY, petal.rotZ);
+        this._dummy.scale.setScalar(petal.scale);
+        this._dummy.updateMatrix();
+        this.petals.setMatrixAt(index, this._dummy.matrix);
+      }
+
+      _updatePetals(dt) {
+        const t = this.time;
+        // 阵风：两个不同频率的正弦叠加，避免机械式直线飘落
+        const windX = 0.55 + 0.32 * Math.sin(t * 0.31) + 0.16 * Math.sin(t * 0.87 + 1.2);
+        const windZ = 0.2 * Math.sin(t * 0.23 + 2.1) + 0.12 * Math.sin(t * 0.61);
+        this.wind.set(windX, windZ);
+
+        for (let i = 0; i < this.petalCount; i++) {
+          const petal = this.petalData[i];
+          const sway = Math.sin(t * petal.swaySpeed + petal.swayPhase);
+          const sway2 = Math.cos(t * petal.swaySpeed * 0.8 + petal.swayPhase);
+
+          petal.x += (windX + sway * petal.swayAmpX) * dt;
+          petal.z += (windZ + sway2 * petal.swayAmpZ) * dt;
+          petal.y -= (petal.fall + sway * 0.16) * dt;
+
+          petal.rotX += petal.spinX * dt;
+          petal.rotY += petal.spinY * dt;
+          petal.rotZ += petal.spinZ * dt;
+
+          // 飘进别墅室内 / 台基上方的花瓣直接回收，避免贴在半透明镜头前
+          const insideVilla =
+            Math.abs(petal.x) < 4.6 && Math.abs(petal.z) < 4.6 && petal.y < 9.6;
+
+          if (
+            petal.y < 0.05 ||
+            insideVilla ||
+            petal.x > 21 || petal.x < -21 ||
+            petal.z > 21 || petal.z < -21
+          ) {
+            this._respawnPetal(petal, false);
+          }
+
+          this._writePetalMatrix(i, petal);
+        }
+        this.petals.instanceMatrix.needsUpdate = true;
+      }
+
+      // ---------- 夜间：萤火虫 + 星空 ----------
+      _buildNightLights() {
+        this._buildFireflies();
+        this._buildStars();
+      }
+
+      _buildFireflies() {
+        // 60 个暖黄小点：位置固定，只做很轻的上下漂浮与呼吸闪烁
+        this.fireflyCount = CONFIG.counts.fireflies;
+        const positions = new Float32Array(this.fireflyCount * 3);
+        const colors = new Float32Array(this.fireflyCount * 3);
+        this.fireflyData = [];
+
+        for (let i = 0; i < this.fireflyCount; i++) {
+          const angle = this._rand(0, Math.PI * 2);
+          const radius = 4.6 + Math.sqrt(this.random()) * 3.6;
+          const firefly = {
+            bx: Math.cos(angle) * radius * 0.92,
+            bz: Math.sin(angle) * radius,
+            by: this._rand(0.5, 2.9),
+            bob: this._rand(0.08, 0.22),
+            speed: this._rand(0.35, 0.78),
+            phase: this._rand(0, Math.PI * 2),
+            // 闪烁频率比旧版更高：更像真萤火，而不是缓慢的呼吸灯
+            flicker: this._rand(CONFIG.fireflies.flickerMin, CONFIG.fireflies.flickerMax),
+            warm: this.random() > 0.16,
+            curX: 0, curY: 0, curZ: 0, curFlick: 0
+          };
+          this.fireflyData.push(firefly);
+          positions[i * 3] = firefly.bx;
+          positions[i * 3 + 1] = firefly.by;
+          positions[i * 3 + 2] = firefly.bz;
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        this.fireflyMat = new THREE.PointsMaterial({
+          size: 0.19,
+          map: createGlowTexture(),
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          vertexColors: true,
+          sizeAttenuation: true
+        });
+        this.fireflies = new THREE.Points(geo, this.fireflyMat);
+        this.fireflies.name = 'fireflies';
+        this.fireflies.frustumCulled = false;
+        this.fireflies.visible = false;
+        this.group.add(this.fireflies);
+
+        // 只跟随少量萤火虫的微光 PointLight：飞行时能轻轻照亮下方草地，
+        // 数量受 CONFIG.fireflies.lightCount 控制，避免 60 盏点光拖垮性能。
+        this.fireflyLights = [];
+        this.fireflyLightIndices = [];
+        const lightCount = Math.min(CONFIG.fireflies.lightCount, this.fireflyCount);
+        for (let i = 0; i < lightCount; i++) {
+          const light = new THREE.PointLight(
+            CONFIG.fireflies.lightColor,
+            0,
+            CONFIG.fireflies.lightDistance,
+            2
+          );
+          light.castShadow = false;
+          light.visible = false;
+          this.group.add(light);
+          this.fireflyLights.push(light);
+          this.fireflyLightIndices.push(
+            Math.floor((i + 0.5) * this.fireflyCount / lightCount)
+          );
+        }
+      }
+
+      _updateFireflies(nightFade = 0) {
+        const t = this.time;
+        const pos = this.fireflies.geometry.attributes.position;
+        const col = this.fireflies.geometry.attributes.color;
+
+        for (let i = 0; i < this.fireflyCount; i++) {
+          const f = this.fireflyData[i];
+          // 横向漂移控制在 ±4cm，像壁纸一样安静；纵向做慢速正弦浮沉
+          const x = f.bx + Math.sin(t * f.speed * 0.7 + f.phase) * 0.04;
+          const z = f.bz + Math.cos(t * f.speed * 0.6 + f.phase * 1.3) * 0.04;
+          const y = f.by + Math.sin(t * f.speed + f.phase) * f.bob;
+          pos.setXYZ(i, x, y, z);
+          f.curX = x;
+          f.curY = y;
+          f.curZ = z;
+
+          // 呼吸式明暗：平方曲线让暗下去的时间更长，接近真实萤火
+          const breath = 0.5 + 0.5 * Math.sin(t * f.flicker + f.phase * 2);
+          const flick = 0.22 + 0.78 * breath * breath;
+          f.curFlick = flick;
+          const warm = f.warm;
+          col.setXYZ(
+            i,
+            (warm ? 1.0 : 0.68) * flick,
+            (warm ? 0.72 : 1.0) * flick,
+            (warm ? 0.24 : 0.58) * flick
+          );
+        }
+        pos.needsUpdate = true;
+        col.needsUpdate = true;
+
+        // 微光点光源跟随对应萤火虫，强度同步闪烁
+        for (let k = 0; k < this.fireflyLights.length; k++) {
+          const light = this.fireflyLights[k];
+          const f = this.fireflyData[this.fireflyLightIndices[k]];
+          light.position.set(f.curX, f.curY, f.curZ);
+          light.intensity = nightFade * CONFIG.fireflies.lightIntensity * (0.35 + 0.65 * f.curFlick);
+          light.visible = nightFade > 0.02;
+        }
+      }
+
+      _buildStars() {
+        this.starCount = CONFIG.counts.stars;
+        const positions = new Float32Array(this.starCount * 3);
+        const colors = new Float32Array(this.starCount * 3);
+        const dist = 150;
+        this.starData = [];
+
+        for (let i = 0; i < this.starCount; i++) {
+          // 只在上半球生成；约 40% 靠近地平线，保证默认俯视视角也能看到星点
+          const y = i % 5 < 2 ? this._rand(0.012, 0.15) : this._rand(0.08, 1);
+          const ring = Math.sqrt(1 - y * y);
+          const theta = this._rand(0, Math.PI * 2);
+          positions[i * 3] = Math.cos(theta) * ring * dist;
+          positions[i * 3 + 1] = y * dist;
+          positions[i * 3 + 2] = Math.sin(theta) * ring * dist;
+
+          // 微蓝 / 微黄随机色，而不是一片死白
+          const palette = CONFIG.stars.palette;
+          const tint = palette[Math.floor(this.random() * palette.length)];
+          const brightness = this._rand(CONFIG.stars.brightnessMin, CONFIG.stars.brightnessMax);
+          colors[i * 3] = tint[0] * brightness;
+          colors[i * 3 + 1] = tint[1] * brightness;
+          colors[i * 3 + 2] = tint[2] * brightness;
+
+          this.starData.push({
+            r: tint[0],
+            g: tint[1],
+            b: tint[2],
+            brightness,
+            phase: this._rand(0, Math.PI * 2),
+            speed: this._rand(CONFIG.stars.twinkleSpeedMin, CONFIG.stars.twinkleSpeedMax)
+          });
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        this.starMat = new THREE.PointsMaterial({
+          size: CONFIG.stars.size,      // 1.7px：细碎的星点，不再是白色大圆斑
+          map: createGlowTexture(),
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          vertexColors: true,
+          sizeAttenuation: false,
+          fog: false
+        });
+        this.stars = new THREE.Points(geo, this.starMat);
+        this.stars.name = 'stars';
+        this.stars.frustumCulled = false;
+        this.stars.visible = false;
+        this.group.add(this.stars);
+      }
+
+      // 星星轻微闪烁：用正弦扰动顶点色，亮度在基础值上下浮动
+      _updateStars(nightFade) {
+        if (nightFade <= 0.01) return;
+        const t = this.time;
+        const col = this.stars.geometry.attributes.color;
+        const depth = CONFIG.stars.twinkleDepth;
+
+        for (let i = 0; i < this.starCount; i++) {
+          const star = this.starData[i];
+          const twinkle = 1 - depth + depth * (0.5 + 0.5 * Math.sin(t * star.speed + star.phase));
+          const b = star.brightness * twinkle;
+          col.setXYZ(i, star.r * b, star.g * b, star.b * b);
+        }
+        col.needsUpdate = true;
+      }
+
+      // 每帧更新：樱花 → 萤火虫 + 星空 的交叉淡入淡出
+      update(dt, nightMix) {
+        this.time += dt;
+        this._updatePetals(dt);
+
+        const petalFade = 1 - THREE.MathUtils.smoothstep(nightMix, 0.1, 0.75);
+        this.petalMat.opacity = petalFade;
+        this.petals.visible = petalFade > 0.01;
+
+        const nightFade = THREE.MathUtils.smoothstep(nightMix, 0.25, 0.9);
+        this.fireflyMat.opacity = nightFade;
+        this.fireflies.visible = nightFade > 0.01;
+        this.starMat.opacity = nightFade;
+        this.stars.visible = nightFade > 0.01;
+
+        // 先算好 nightFade，再驱动萤火虫的微光点光源
+        if (nightFade > 0.01) {
+          this._updateFireflies(nightFade);
+          this._updateStars(nightFade);
+        }
+
+        this.stars.rotation.y += dt * 0.008;
+      }
+    }
+
+    // ---------- 天空飘落的树叶 / 花瓣：FALLING_LEAF_COUNT 片小面片 ----------
+    // 与樱花区分：更小、更缓、颜色在粉色与浅黄之间，落在草地 / 河面上方后回到天空。
+    class FallingLeaves {
+      constructor() {
+        this.count = FALLING_LEAF_COUNT;
+        this.random = makeRandom(31415926);
+        this.time = 0;
+
+        this.material = new THREE.MeshStandardMaterial({
+          map: createPetalTexture(), // 复用花瓣轮廓，避免出现方形纸片
+          color: 0xffffff, // instanceColor 提供粉色 / 浅黄，昼夜由材质整体染色
+          roughness: 0.85,
+          metalness: 0,
+          side: THREE.DoubleSide,
+          transparent: true,
+          depthWrite: false,
+          alphaTest: 0.12
+        });
+        this.mesh = new THREE.InstancedMesh(
+          new THREE.PlaneGeometry(1, 1),
+          this.material,
+          this.count
+        );
+        this.mesh.name = 'falling-leaves';
+        this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.mesh.frustumCulled = false;
+        this.mesh.castShadow = false;
+        this.mesh.receiveShadow = false;
+
+        this._dummy = new THREE.Object3D();
+        this._color = new THREE.Color();
+        this.leaves = [];
+        const tones = [0xffc2d8, 0xffe6a8, 0xfff3c4, 0xf7a8c4];
+
+        for (let i = 0; i < this.count; i++) {
+          const leaf = {};
+          this._respawn(leaf, true);
+          this.leaves.push(leaf);
+          this.mesh.setColorAt(i, this._color.setHex(tones[i % tones.length]));
+          this._write(i, leaf);
+        }
+        this.mesh.instanceMatrix.needsUpdate = true;
+        if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+        scene.add(this.mesh);
+      }
+
+      _rand(min, max) {
+        return min + this.random() * (max - min);
+      }
+
+      _respawn(leaf, initial) {
+        // 花瓣可以飘在院子里，但不要生成在别墅上方（否则会落进室内）
+        for (let attempt = 0; attempt < 8; attempt++) {
+          leaf.x = this._rand(-17, 17);
+          leaf.z = this._rand(-17, 17);
+          if (Math.abs(leaf.x) > 4.6 || Math.abs(leaf.z) > 4.6) break;
+        }
+        leaf.y = initial ? this._rand(1, 15) : this._rand(13, 17); // 回到天空
+        leaf.fall = this._rand(0.35, 0.75);
+        leaf.swayPhase = this._rand(0, Math.PI * 2);
+        leaf.swaySpeed = this._rand(0.5, 1.3);
+        leaf.swayAmp = this._rand(0.2, 0.55);
+        leaf.rotX = this._rand(0, Math.PI * 2);
+        leaf.rotY = this._rand(0, Math.PI * 2);
+        leaf.rotZ = this._rand(0, Math.PI * 2);
+        leaf.spinX = this._rand(-2.0, 2.0);
+        leaf.spinY = this._rand(-1.6, 1.6);
+        leaf.spinZ = this._rand(-1.8, 1.8);
+        leaf.size = this._rand(0.08, 0.16);
+      }
+
+      _write(index, leaf) {
+        this._dummy.position.set(leaf.x, leaf.y, leaf.z);
+        this._dummy.rotation.set(leaf.rotX, leaf.rotY, leaf.rotZ);
+        this._dummy.scale.set(leaf.size, leaf.size * 1.6, leaf.size);
+        this._dummy.updateMatrix();
+        this.mesh.setMatrixAt(index, this._dummy.matrix);
+      }
+
+      update(dt) {
+        this.time += dt;
+        const windX = 0.32 + 0.22 * Math.sin(this.time * 0.31);
+        const windZ = 0.12 + 0.14 * Math.sin(this.time * 0.47 + 1.4);
+
+        for (let i = 0; i < this.count; i++) {
+          const leaf = this.leaves[i];
+          const sway = Math.sin(this.time * leaf.swaySpeed + leaf.swayPhase);
+
+          leaf.x += (windX + sway * leaf.swayAmp) * dt;
+          leaf.z += windZ * dt;
+          leaf.y -= (leaf.fall + sway * 0.08) * dt;
+
+          leaf.rotX += leaf.spinX * dt;
+          leaf.rotY += leaf.spinY * dt;
+          leaf.rotZ += leaf.spinZ * dt;
+
+          // 飘进别墅室内 / 台基上方的花瓣直接回收，避免半透明花瓣贴在镜头前
+          const insideVilla =
+            Math.abs(leaf.x) < 4.6 && Math.abs(leaf.z) < 4.6 && leaf.y < 9.6;
+
+          if (
+            leaf.y < 0.04 ||
+            insideVilla ||
+            leaf.x > 20 || leaf.x < -20 ||
+            leaf.z > 20 || leaf.z < -20
+          ) {
+            this._respawn(leaf, false);
+          }
+          this._write(i, leaf);
+        }
+        this.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+
+    const particles = new Particles();
+    const fallingLeaves = new FallingLeaves();
+
+
+    // ---------- 楼层分层显示交互 ----------
+    // 只选择带 data-floor 的按钮，避免把昼夜切换按钮卷进来
+    const floorButtons = document.querySelectorAll('.floor-btn[data-floor]');
+
+    // 当前被单独查看的楼层（null 表示显示全部）
+    let cutawayFloor = null;
+    const xrayBtn = document.getElementById('xray-btn');
+    let xrayEnabled = false;
+
+    function setLabelVisible(label, visible) {
+      if (!label) return;
+      label.visible = visible;
+      // CSS2D 标签是真实 DOM，必须同步 display，否则 group.visible 不会隐藏它们
+      if (label.element) label.element.style.display = visible ? '' : 'none';
+    }
+
+    // 只把外墙材质切到半透明；隔断 / 楼板 / 楼梯 / 家具保持完全实体
+    function applyWallAppearance() {
+      const cutaway = cutawayFloor !== null;
+      const opacity = xrayEnabled
+        ? CONFIG.xray.wallOpacity
+        : (cutaway ? 0.05 : 1);
+
+      wallMat.opacity = opacity;
+      wallMat.transparent = opacity < 1;
+      wallMat.depthWrite = opacity >= 1;
+      wallMat.needsUpdate = true;
+
+      outerWallMeshes.forEach((mesh) => {
+        const isCut = cutaway && mesh.userData.floorIndex === cutawayFloor;
+        // 半透明墙体再投射阴影会把室内压黑，透视 / 剖切时统一关闭
+        mesh.castShadow = !isCut && !xrayEnabled;
+      });
+    }
+
+    function setXray(enabled) {
+      xrayEnabled = Boolean(enabled);
+      xrayBtn.classList.toggle('is-active', xrayEnabled);
+      xrayBtn.setAttribute('aria-pressed', String(xrayEnabled));
+      xrayBtn.textContent = xrayEnabled ? '👁️ 恢复实体墙' : '👁️ 透视墙体';
+      document.documentElement.dataset.xray = xrayEnabled ? '1' : '0';
+      applyWallAppearance();
+    }
+
+    xrayBtn.addEventListener('click', () => setXray(!xrayEnabled));
+
+    // onlyIndex 为 0/1/2 时只显示该层，为 null 时显示全部
+    function showOnlyFloor(onlyIndex) {
+      cutawayFloor = onlyIndex;
+      const cutaway = onlyIndex !== null;
+
+      floorGroups.forEach((group, i) => {
+        const visible = !cutaway || i === onlyIndex;
+        group.visible = visible;
+
+        // 核心联动：标签随楼层一起显示 / 隐藏，避免视线穿模
+        setLabelVisible(floorLabels[i], visible);
+        for (const label of extraFloorLabels[i]) setLabelVisible(label, visible);
+
+        group.traverse((obj) => {
+          if (!obj.isMesh) return;
+          // 剖切层把屋面板换成半透明材质，否则俯视时屋顶会挡住室内家具
+          if (obj.userData.isRoofPanel) {
+            const isCut = cutaway && i === onlyIndex;
+            obj.material = isCut ? ghostRoofMat : obj.userData.roofMaterial;
+            obj.castShadow = !isCut;
+          }
+          // 当前层顶板隐藏，才能从上方看进室内；其余楼层顶板保持
+          if (obj.userData.isCeilingSlab) {
+            obj.visible = !(cutaway && i === onlyIndex);
+          }
+        });
+
+        // 室内暖光：单独查看时加强，其余楼层熄灭；回到“全部”时按昼夜恢复
+        if (interiorLights[i]) {
+          if (!cutaway) {
+            interiorLights[i].intensity = Math.max(
+              interiorDayIntensity[i],
+              nightMix * interiorNightIntensity[i]
+            );
+          } else if (i === onlyIndex) {
+            interiorLights[i].intensity = CONFIG.lights.interiorCutaway + nightMix * 2.5;
+          } else {
+            interiorLights[i].intensity = 0;
+          }
+        }
+      });
+
+      // 单层查看时白墙更淡，露出客厅 / 卧室 / 书房与楼梯
+      applyWallAppearance();
+    }
+
+    floorButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.floor;
+        showOnlyFloor(key === 'all' ? null : Number(key) - 1);
+
+        floorButtons.forEach((other) => {
+          const isActive = other === btn;
+          other.classList.toggle('is-active', isActive);
+          other.setAttribute('aria-pressed', String(isActive));
+        });
+      });
+    });
+
+    // ================= 第一人称漫游 =================
+    // 设计要点：
+    // 1) 视点高度固定 1.7m，只在 XZ 平面移动，抬头 / 低头不影响脚下高度；
+    // 2) 庭院矩形 + 院门走廊边界（各收进一个人体半径）+ 别墅台基 AABB，保证不会穿墙 / 穿围栏；
+    // 3) 额外向前方打一条胸口高度的射线，检测灌木、树干等细节障碍。
+
+    const EYE_HEIGHT = 1.7;          // 视点高度（米）
+    const ROAM_RADIUS = 0.38;        // 人体碰撞半径（米）
+    const ROAM_WALK_SPEED = 2.8;     // 步行速度（米 / 秒）
+    const ROAM_RUN_SPEED = 5.0;      // 按住 Shift 的奔跑速度
+    const ROAM_ACCEL = 12;           // 速度阻尼系数，越大起步 / 停步越干脆
+    const ROAM_RAY_HEIGHT = 0.95;    // 射线高度：胸口位置，能扫到围栏与灌木
+    const ROAM_FOV = 62;             // 第一人称更接近人眼的视野，退出时恢复 42°
+    const ROAM_START = new THREE.Vector3(0, EYE_HEIGHT, 12.2); // 院门外的石径起点
+    const ROAM_START_PITCH = 0.14;   // 略微抬头，看清门头与屋顶（弧度）
+
+    const roamBtn = document.getElementById('roam-btn');
+    const roamCrosshair = document.getElementById('roam-crosshair');
+    const roamHint = document.getElementById('roam-hint');
+
+    // 按键状态表：keydown 置 true，keyup / 退出漫游 / 失焦时清零
+    const keys = {
+      KeyW: false,
+      KeyA: false,
+      KeyS: false,
+      KeyD: false,
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
+      ShiftLeft: false,
+      ShiftRight: false
+    };
+
+    let roamActive = false;          // 是否处于漫游模式（相机已接管）
+    let roamLocked = false;          // 浏览器是否真的锁定了指针
+    const roamVelocity = new THREE.Vector3();
+    const roamForward = new THREE.Vector3();
+    const roamRight = new THREE.Vector3();
+    const roamWish = new THREE.Vector3();
+    const roamRaycaster = new THREE.Raycaster();
+    const roamRayOrigin = new THREE.Vector3();
+    const roamRayDirection = new THREE.Vector3();
+
+    // 进入漫游前的上帝视角，退出时原样恢复
+    const orbitSnapshot = {
+      position: new THREE.Vector3(),
+      target: new THREE.Vector3(),
+      fov: camera.fov
+    };
+
+    // 庭院矩形移动边界（向内收人体半径 + 0.12m 安全距离）
+    const ROAM_BOUNDS = {
+      minX: -COURTYARD_HALF + ROAM_RADIUS + 0.12,
+      maxX: COURTYARD_HALF - ROAM_RADIUS - 0.12,
+      minZ: -COURTYARD_HALF + ROAM_RADIUS + 0.12,
+      maxZ: COURTYARD_HALF - ROAM_RADIUS - 0.12
+    };
+
+    // 院门走廊 + 木桥通道：走出院门后沿石径上桥，可一直走到对岸
+    const ROAM_GATE = {
+      minX: -GATE_HALF + ROAM_RADIUS,
+      maxX: GATE_HALF - ROAM_RADIUS,
+      maxZ: BRIDGE_END_Z + 0.9
+    };
+
+    // 别墅台基 7.9m 见方；不再整块阻挡，改为按台基 / 台阶 / 楼板高度采样
+    const ROAM_BASE_TOP = BASE_Y;
+    const ROAM_BASE_HALF = 7.9 / 2;
+    const ROAM_ENTRY_STEP = { top: 0.14, minZ: 3.9, maxZ: 4.6, halfX: 1.2 };
+    const ROAM_STEP_UP = 0.45;    // 最大上台阶高度（14cm 台阶 + 6cm 室内地面）
+    const ROAM_STEP_DOWN = 0.55;  // 最大下落高度，超过就当作踏空并禁止移动
+    const ROAM_DOOR_PASS = 0.34;  // 入户门可通行的半宽（门洞 1.2m）
+
+    // 每层室内地面高度与内轮廓，和建模用的 tiers / WALL_T 保持一致
+    let roamLevelY = BASE_Y;
+    const ROAM_FLOORS = tiers.map((tier, index) => {
+      const floor = {
+        index,
+        y: roamLevelY + 0.06,
+        halfX: tier.w / 2 - WALL_T,
+        halfZ: tier.d / 2 - WALL_T
+      };
+      roamLevelY += tier.h;
+      return floor;
+    });
+
+    const ROAM_STAIR_RUN = STAIR.zBottom - STAIR.zTop;
+    const ROAM_STAIR_RISE = STAIR.topY - STAIR.baseY;
+
+    function roamStairY(z) {
+      const t = THREE.MathUtils.clamp((STAIR.zBottom - z) / ROAM_STAIR_RUN, 0, 1);
+      return STAIR.baseY + t * ROAM_STAIR_RISE;
+    }
+
+    function onStairFootprint(x, z) {
+      return (
+        x >= STAIR.xMin && x <= STAIR.xMax &&
+        z >= STAIR.zTop && z <= STAIR.zBottom
+      );
+    }
+
+    // 脚下可站立的高度；null 表示这里没有落脚面（例如楼梯井上方）
+    function sampleRoamGround(x, z, feetY) {
+      const minY = feetY - ROAM_STEP_DOWN;
+      const maxY = feetY + ROAM_STEP_UP;
+      const take = (y) => (y >= minY && y <= maxY ? y : null);
+
+      // 楼梯是实心踏步：只有坡道面可站，脚下没有一楼地面
+      if (onStairFootprint(x, z)) return take(roamStairY(z));
+
+      let best = take(0); // 庭院 / 石桥地面
+
+      if (Math.abs(x) <= ROAM_BASE_HALF && Math.abs(z) <= ROAM_BASE_HALF) {
+        const baseY = take(ROAM_BASE_TOP);
+        if (baseY !== null) best = Math.max(best === null ? -Infinity : best, baseY);
+      }
+
+      if (
+        Math.abs(x) <= ROAM_ENTRY_STEP.halfX &&
+        z >= ROAM_ENTRY_STEP.minZ && z <= ROAM_ENTRY_STEP.maxZ
+      ) {
+        const stepY = take(ROAM_ENTRY_STEP.top);
+        if (stepY !== null) best = Math.max(best === null ? -Infinity : best, stepY);
+      }
+
+      for (const floor of ROAM_FLOORS) {
+        if (Math.abs(x) > floor.halfX || Math.abs(z) > floor.halfZ) continue;
+        // 二楼楼梯洞口：洞口范围内没有楼板
+        if (
+          floor.index === 1 &&
+          x >= STAIR.hole.minX && x <= STAIR.hole.maxX &&
+          z >= STAIR.hole.minZ && z <= STAIR.hole.maxZ
+        ) {
+          continue;
+        }
+        const y = take(floor.y);
+        if (y !== null) best = Math.max(best === null ? -Infinity : best, y);
+      }
+
+      return best;
+    }
+
+    // 当前高度对应的楼层（上楼梯到 2.7m 以上就按二楼判断墙体）
+    function activeRoamFloor(feetY) {
+      let active = 0;
+      for (const floor of ROAM_FLOORS) {
+        if (feetY >= floor.y - 0.42) active = floor.index;
+      }
+      return active;
+    }
+
+    // 外墙洞口检查：窗洞不可穿越，入户门可以；楼梯贴着二楼东墙，不做带宽检查
+    function isBlockedByRoamWalls(x, z, feetY) {
+      if (onStairFootprint(x, z)) return false;
+
+      const tier = tiers[activeRoamFloor(feetY)];
+      const halfW = tier.w / 2;
+      const halfD = tier.d / 2;
+      const pad = WALL_T / 2 + ROAM_RADIUS;
+
+      if (Math.abs(x) <= halfW + pad) {
+        for (const sz of [-1, 1]) {
+          if (Math.abs(z - sz * (halfD - WALL_T / 2)) >= pad) continue;
+          if (tier === tiers[0] && sz === 1 && Math.abs(x) <= ROAM_DOOR_PASS) continue;
+          return true;
+        }
+      }
+      if (Math.abs(z) <= halfD + pad) {
+        for (const sx of [-1, 1]) {
+          if (Math.abs(x - sx * (halfW - WALL_T / 2)) < pad) return true;
+        }
+      }
+      return false;
+    }
+
+    // 庭院四角灌木，坐标与上方创建灌木时保持一致
+    const ROAM_BUSH_BOXES = [
+      [-6.2, 5.6], [6.2, 5.6], [-6.2, -5.8], [6.2, -5.8]
+    ].map(([x, z]) => ({
+      minX: x - 0.58 - ROAM_RADIUS,
+      maxX: x + 0.58 + ROAM_RADIUS,
+      minZ: z - 0.58 - ROAM_RADIUS,
+      maxZ: z + 0.58 + ROAM_RADIUS
+    }));
+
+    // 前向射线的碰撞目标：别墅实体 + 围栏 + 树木；跳过玻璃，避免“透明墙”挡路
+    const roamRayTargets = [];
+    for (const root of [villa, fenceGroup, treeGroup]) {
+      root.traverse((obj) => {
+        if (!obj.isMesh) return;
+        if (obj.material === glassMat || obj.material === fenceGlassMat) return;
+        roamRayTargets.push(obj);
+      });
+    }
+    // 外部 GLTF 模型同样参与漫游碰撞：补登记初始化期间已加载完的模型，
+    // 之后加载的模型会在 loadModel() 的成功回调里直接 push。
+    roamRayTargets.push(...externalModelMeshes);
+
+    // 楼梯踏步由脚下高度采样处理：若继续当作前向障碍，上楼时会被前方的踏步挡住
+    for (const step of stairStepMeshes) {
+      const index = roamRayTargets.indexOf(step);
+      if (index >= 0) roamRayTargets.splice(index, 1);
+    }
+    roamRayTargetsReady = true;
+
+    // 室内隔断的 AABB：按玩家身体高度判断，保留门洞（隔断本身已分段建模）
+    const roamWallBoxes = interiorWallMeshes.map((mesh) => {
+      const box = new THREE.Box3().setFromObject(mesh);
+      return {
+        minX: box.min.x,
+        maxX: box.max.x,
+        minY: box.min.y,
+        maxY: box.max.y,
+        minZ: box.min.z,
+        maxZ: box.max.z
+      };
+    });
+
+    function isBlockedByInterior(x, z, feetY) {
+      const bodyMin = feetY + 0.15;
+      const bodyMax = feetY + EYE_HEIGHT - 0.1;
+      for (const box of roamWallBoxes) {
+        if (bodyMax < box.minY || bodyMin > box.maxY) continue;
+        if (
+          x > box.minX - ROAM_RADIUS && x < box.maxX + ROAM_RADIUS &&
+          z > box.minZ - ROAM_RADIUS && z < box.maxZ + ROAM_RADIUS
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function resetRoamInput() {
+      for (const code of Object.keys(keys)) keys[code] = false;
+      roamVelocity.set(0, 0, 0);
+    }
+
+    function setRoamUI(active) {
+      roamBtn.classList.toggle('is-active', active);
+      roamBtn.setAttribute('aria-pressed', String(active));
+      roamBtn.setAttribute(
+        'aria-label',
+        active ? '退出第一人称漫游模式' : '进入第一人称漫游模式'
+      );
+      roamBtn.textContent = active ? '🚶 退出漫游' : '🚶 漫游模式';
+      roamCrosshair.classList.toggle('is-visible', active && roamLocked);
+      roamHint.classList.toggle('is-visible', active && roamLocked);
+      document.documentElement.dataset.roamActive = active ? '1' : '0';
+    }
+
+    function enterRoam() {
+      if (roamActive) return;
+
+      // 保存上帝视角
+      orbitSnapshot.position.copy(camera.position);
+      orbitSnapshot.target.copy(controls.target);
+      orbitSnapshot.fov = camera.fov;
+
+      roamActive = true;
+      resetRoamInput();
+
+      // 关闭轨道控制，启用指针锁定控制
+      controls.enabled = false;
+      fpControls.enabled = true;
+      setRoamUI(true);
+
+      // 从院门外开始，面朝别墅（-Z），略微抬头
+      camera.position.copy(ROAM_START);
+      camera.rotation.set(ROAM_START_PITCH, 0, 0, 'YXZ');
+      camera.up.set(0, 1, 0);
+      camera.fov = ROAM_FOV;
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+
+      roamBtn.blur(); // 防止焦点留在按钮上，空格键误触退出
+      fpControls.lock(); // 必须由用户手势（按钮点击）触发
+    }
+
+    function exitRoam() {
+      if (!roamActive) return;
+
+      roamActive = false;
+      resetRoamInput();
+
+      // 恢复轨道控制
+      fpControls.enabled = false;
+      controls.enabled = true;
+      setRoamUI(false);
+
+      // 相机回到进入漫游前的位置、观察点与视野
+      camera.position.copy(orbitSnapshot.position);
+      camera.up.set(0, 1, 0);
+      camera.fov = orbitSnapshot.fov;
+      camera.updateProjectionMatrix();
+      controls.target.copy(orbitSnapshot.target);
+      controls.update();
+
+      // 兜底：非 ESC 的退出路径也主动释放指针锁
+      if (document.pointerLockElement === renderer.domElement) {
+        fpControls.unlock();
+      }
+    }
+
+    function toggleRoam() {
+      if (roamActive) exitRoam();
+      else enterRoam();
+    }
+
+    roamBtn.addEventListener('click', toggleRoam);
+
+    // 以浏览器真实的指针锁定状态为准
+    fpControls.addEventListener('lock', () => {
+      roamLocked = true;
+      setRoamUI(roamActive);
+    });
+
+    fpControls.addEventListener('unlock', () => {
+      roamLocked = false;
+      // ESC / 浏览器强制解锁 → 回到上帝视角
+      exitRoam();
+    });
+
+    // 指针锁定失败（例如 ESC 后 1 秒内立即再次请求）时回退
+    document.addEventListener('pointerlockerror', () => {
+      if (roamActive) exitRoam();
+    });
+
+    // 按键状态：keydown 置位、keyup 复位，避免按键粘滞
+    window.addEventListener('keydown', (event) => {
+      if (event.code === 'Escape' && roamActive) {
+        exitRoam();
+        return;
+      }
+      if (!roamActive) return;
+      if (!Object.hasOwn(keys, event.code)) return;
+      keys[event.code] = true;
+      event.preventDefault();
+    });
+
+    window.addEventListener('keyup', (event) => {
+      if (Object.hasOwn(keys, event.code)) keys[event.code] = false;
+    });
+
+    // 切出窗口 / 标签页时清空按键，回来后不会继续“自动走”
+    window.addEventListener('blur', resetRoamInput);
+
+    function isBlockedAt(x, z, feetY) {
+      // 庭院矩形 + 院门走廊：两个矩形的并集就是可行走区域
+      const inCourtyard =
+        x >= ROAM_BOUNDS.minX && x <= ROAM_BOUNDS.maxX &&
+        z >= ROAM_BOUNDS.minZ && z <= ROAM_BOUNDS.maxZ;
+      const inGatePath =
+        x >= ROAM_GATE.minX && x <= ROAM_GATE.maxX &&
+        z > ROAM_BOUNDS.maxZ && z <= ROAM_GATE.maxZ;
+      if (!inCourtyard && !inGatePath) return true;
+
+      // 桥面走廊收窄：栏杆以外是河水，不能直接横穿出去
+      if (z > BRIDGE_START_Z - 0.4 && z <= BRIDGE_END_Z + 0.4) {
+        if (Math.abs(x) > BRIDGE_HALF_WIDTH - 0.42) return true;
+      }
+
+      // 别墅：外墙窗洞 / 门洞、室内隔断、楼板与楼梯高度
+      if (isBlockedByRoamWalls(x, z, feetY)) return true;
+      if (isBlockedByInterior(x, z, feetY)) return true;
+      if (sampleRoamGround(x, z, feetY) === null) return true;
+
+      // 四角灌木
+      for (const box of ROAM_BUSH_BOXES) {
+        if (x > box.minX && x < box.maxX && z > box.minZ && z < box.maxZ) return true;
+      }
+      return false;
+    }
+
+    // 前方射线：本次脚步长度内有实体就阻止这次位移
+    function hasObstacleAhead(dx, dz) {
+      const distance = Math.hypot(dx, dz);
+      if (distance < 1e-5) return false;
+
+      roamRayDirection.set(dx / distance, 0, dz / distance);
+      roamRaycaster.set(
+        roamRayOrigin.set(
+          camera.position.x,
+          camera.position.y - EYE_HEIGHT + ROAM_RAY_HEIGHT,
+          camera.position.z
+        ),
+        roamRayDirection
+      );
+      roamRaycaster.near = 0;
+      roamRaycaster.far = ROAM_RADIUS + distance;
+
+      const hits = roamRaycaster.intersectObjects(roamRayTargets, false);
+      return hits.length > 0;
+    }
+
+    function moveRoamAxis(axis, delta) {
+      if (Math.abs(delta) < 1e-6) return;
+
+      const dx = axis === 'x' ? delta : 0;
+      const dz = axis === 'z' ? delta : 0;
+      const nextX = camera.position.x + dx;
+      const nextZ = camera.position.z + dz;
+      const feetY = camera.position.y - EYE_HEIGHT;
+
+      if (isBlockedAt(nextX, nextZ, feetY) || hasObstacleAhead(dx, dz)) {
+        roamVelocity[axis] *= 0.25; // 抵住障碍后迅速收速，避免贴墙抖动
+        return;
+      }
+
+      camera.position.x = nextX;
+      camera.position.z = nextZ;
+    }
+
+    function updateRoam(dt) {
+      const step = Math.min(dt, 0.05);
+
+      // 根据相机四元数求水平前进 / 右方向（pitch 压平）
+      roamForward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+      roamForward.y = 0;
+      if (roamForward.lengthSq() < 1e-6) roamForward.set(0, 0, -1);
+      roamForward.normalize();
+
+      roamRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+      roamRight.y = 0;
+      if (roamRight.lengthSq() < 1e-6) roamRight.set(1, 0, 0);
+      roamRight.normalize();
+
+      const forwardInput =
+        (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+      const rightInput =
+        (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+
+      roamWish
+        .set(0, 0, 0)
+        .addScaledVector(roamForward, forwardInput)
+        .addScaledVector(roamRight, rightInput);
+      if (roamWish.lengthSq() > 1) roamWish.normalize();
+
+      // 指数阻尼：不同帧率下加减速手感一致
+      const speed = keys.ShiftLeft || keys.ShiftRight ? ROAM_RUN_SPEED : ROAM_WALK_SPEED;
+      const damping = 1 - Math.exp(-ROAM_ACCEL * step);
+      roamVelocity.x += (roamWish.x * speed - roamVelocity.x) * damping;
+      roamVelocity.z += (roamWish.z * speed - roamVelocity.z) * damping;
+      if (roamWish.lengthSq() === 0 && roamVelocity.lengthSq() < 1e-4) {
+        roamVelocity.set(0, 0, 0);
+      }
+
+      // 分轴移动：贴着墙或围栏时可以顺着障碍滑动
+      moveRoamAxis('x', roamVelocity.x * step);
+      moveRoamAxis('z', roamVelocity.z * step);
+
+      // 视点跟随脚下地面：台基 / 台阶 / 一楼地面 / 楼梯坡道 / 二三层楼板
+      const feetY = camera.position.y - EYE_HEIGHT;
+      const groundY = sampleRoamGround(camera.position.x, camera.position.z, feetY);
+      if (groundY !== null) camera.position.y = groundY + EYE_HEIGHT;
+    }
+
+    // ================= 昼夜光照切换 =================
+    // 两套光照预设：切换时按 nightMix（0=白天，1=夜晚）在渲染循环里平滑插值
+    // 所有颜色与强度都从 CONFIG 读取，调参只需改文件顶部的 CONFIG。
+    const DAY = {
+      background: new THREE.Color(CONFIG.colors.day.background),
+      fog: new THREE.Color(CONFIG.colors.day.fog),
+      ground: new THREE.Color(CONFIG.colors.day.ground),
+      courtyardGround: new THREE.Color(CONFIG.colors.day.courtyardGround),
+      courtyardPath: new THREE.Color(CONFIG.colors.day.courtyardPath),
+      meadow: new THREE.Color(CONFIG.colors.day.meadow),
+      river: new THREE.Color(CONFIG.colors.day.river),
+      riverBank: new THREE.Color(CONFIG.colors.day.riverBank),
+      grassTint: new THREE.Color(CONFIG.colors.day.grassTint),
+      shrubTint: new THREE.Color(CONFIG.colors.day.shrubTint),
+      stoneTint: new THREE.Color(CONFIG.colors.day.stoneTint),
+      bridgeWood: new THREE.Color(CONFIG.colors.day.bridgeWood),
+      bridgeDark: new THREE.Color(CONFIG.colors.day.bridgeDark),
+      leafTint: new THREE.Color(CONFIG.colors.day.leafTint),
+      wall: new THREE.Color(CONFIG.colors.day.wall),
+      roof: new THREE.Color(CONFIG.colors.day.roof),
+      roofSlab: new THREE.Color(CONFIG.colors.day.roofSlab),
+      trim: new THREE.Color(CONFIG.colors.day.trim),
+      ambientColor: new THREE.Color(CONFIG.colors.day.ambient),
+      ambientIntensity: CONFIG.lights.ambientDay,
+      hemiSky: new THREE.Color(CONFIG.colors.day.hemiSky),
+      hemiGround: new THREE.Color(CONFIG.colors.day.hemiGround),
+      hemiIntensity: CONFIG.lights.hemiDay,
+      sunColor: new THREE.Color(CONFIG.colors.day.sun),
+      sunIntensity: CONFIG.lights.sunDay,
+      sunPosition: new THREE.Vector3(14, 20, 10),
+      rimColor: new THREE.Color(CONFIG.colors.day.rim),
+      rimIntensity: CONFIG.lights.rimDay,
+      glassOpacity: CONFIG.materials.glassOpacity,
+      glassEmissiveIntensity: CONFIG.materials.glassEmissiveDay,
+      windowLightIntensity: CONFIG.lights.windowDay,
+      exposure: CONFIG.exposure.day,
+      environmentIntensity: CONFIG.lights.environmentDay
+    };
+
+    const NIGHT = {
+      background: new THREE.Color(CONFIG.colors.night.background), // 深空蓝，给星点与暖窗留出对比
+      fog: new THREE.Color(CONFIG.colors.night.fog),
+      ground: new THREE.Color(CONFIG.colors.night.ground),
+      courtyardGround: new THREE.Color(CONFIG.colors.night.courtyardGround),
+      courtyardPath: new THREE.Color(CONFIG.colors.night.courtyardPath), // 月光下的冷灰石板
+      meadow: new THREE.Color(CONFIG.colors.night.meadow),
+      river: new THREE.Color(CONFIG.colors.night.river),
+      riverBank: new THREE.Color(CONFIG.colors.night.riverBank),
+      grassTint: new THREE.Color(CONFIG.colors.night.grassTint), // 月光把草染成冷绿，而不是一片黑
+      shrubTint: new THREE.Color(CONFIG.colors.night.shrubTint),
+      stoneTint: new THREE.Color(CONFIG.colors.night.stoneTint),
+      bridgeWood: new THREE.Color(CONFIG.colors.night.bridgeWood),
+      bridgeDark: new THREE.Color(CONFIG.colors.night.bridgeDark),
+      leafTint: new THREE.Color(CONFIG.colors.night.leafTint),
+      wall: new THREE.Color(CONFIG.colors.night.wall),          // 白墙转为冷调
+      roof: new THREE.Color(CONFIG.colors.night.roof),
+      roofSlab: new THREE.Color(CONFIG.colors.night.roofSlab),  // 保留黛瓦贴图本色，由冷光染色
+      trim: new THREE.Color(CONFIG.colors.night.trim),
+      ambientColor: new THREE.Color(CONFIG.colors.night.ambient),
+      ambientIntensity: CONFIG.lights.ambientNight,             // 冷调基础光，避免死黑
+      hemiSky: new THREE.Color(CONFIG.colors.night.hemiSky),
+      hemiGround: new THREE.Color(CONFIG.colors.night.hemiGround),
+      hemiIntensity: CONFIG.lights.hemiNight,
+      sunColor: new THREE.Color(CONFIG.colors.night.sun),       // 更冷的蓝月光
+      sunIntensity: CONFIG.lights.sunNight,                     // 月光克制：水面已是漫反射，不会聚成光球
+      sunPosition: new THREE.Vector3(-16, 18, 14),              // 换到另一侧，仍照亮正面
+      rimColor: new THREE.Color(CONFIG.colors.night.rim),
+      rimIntensity: CONFIG.lights.rimNight,
+      glassOpacity: CONFIG.materials.glassNightOpacity,
+      glassEmissiveIntensity: CONFIG.materials.glassEmissiveNight, // 暖窗越过 Bloom 阈值，但不过曝
+      windowLightIntensity: CONFIG.lights.windowNight,          // 窗内灯光在墙上形成的克制光晕
+      exposure: CONFIG.exposure.night,
+      environmentIntensity: CONFIG.lights.environmentNight      // 夜里几乎关掉 HDR 反射，消灭水面光斑
+    };
+
+    const dayNightBtn = document.getElementById('daynight-btn');
+    let isNight = false;
+    let nightMix = 0; // 当前过渡进度：0 = 白天，1 = 夜晚
+
+    dayNightBtn.addEventListener('click', () => {
+      isNight = !isNight;
+      dayNightBtn.classList.toggle('is-night', isNight);
+      dayNightBtn.setAttribute('aria-pressed', String(isNight));
+      dayNightBtn.setAttribute(
+        'aria-label',
+        isNight ? '当前为夜晚，切换到白天' : '当前为白天，切换到夜晚'
+      );
+      dayNightBtn.textContent = isNight ? '☀️ 切换到白天' : '🌙 切换到夜晚';
+    });
+
+    // dt 为秒；指数阻尼保证不同帧率下过渡时长一致（约 1 秒完成）
+    function updateDayNight(dt) {
+      const target = isNight ? 1 : 0;
+      nightMix += (target - nightMix) * (1 - Math.exp(-4.5 * dt));
+      if (Math.abs(target - nightMix) < 0.0005) nightMix = target;
+
+      const t = nightMix;
+
+      scene.background.copy(DAY.background).lerp(NIGHT.background, t);
+      // 雾色与密度都来自 CONFIG：白天轻薄，夜晚浓成深蓝
+      scene.fog.color.copy(DAY.fog).lerp(NIGHT.fog, t);
+      scene.fog.density = THREE.MathUtils.lerp(
+        CONFIG.fog.dayDensity,
+        CONFIG.fog.nightDensity,
+        t
+      );
+      ground.material.color.copy(DAY.ground).lerp(NIGHT.ground, t);
+      courtyardGroundMat.color.copy(DAY.courtyardGround).lerp(NIGHT.courtyardGround, t);
+      courtyardPathMat.color.copy(DAY.courtyardPath).lerp(NIGHT.courtyardPath, t);
+      courtyardPathMat.emissiveIntensity = t * 0.6;
+
+      // 新增场景元素同步昼夜：草坪 / 水面 / 河岸 / 草与石头（实例色由材质整体染色）
+      meadowMat.color.copy(DAY.meadow).lerp(NIGHT.meadow, t);
+      riverWaterMat.color.copy(DAY.river).lerp(NIGHT.river, t);
+      // 夜里的自发光只保留一层很暗的冷蓝水色，数值远低于 Bloom 阈值
+      riverWaterMat.emissiveIntensity = t * 0.35;
+      riverBankMat.color.copy(DAY.riverBank).lerp(NIGHT.riverBank, t);
+      grassMat.color.copy(DAY.grassTint).lerp(NIGHT.grassTint, t);
+      shrubMat.color.copy(DAY.shrubTint).lerp(NIGHT.shrubTint, t);
+      stoneMat.color.copy(DAY.stoneTint).lerp(NIGHT.stoneTint, t);
+      bridgeWoodMat.color.copy(DAY.bridgeWood).lerp(NIGHT.bridgeWood, t);
+      bridgeDarkMat.color.copy(DAY.bridgeDark).lerp(NIGHT.bridgeDark, t);
+      fallingLeaves.material.color.copy(DAY.leafTint).lerp(NIGHT.leafTint, t);
+
+      fenceGlassMat.opacity = THREE.MathUtils.lerp(0.16, 0.17, t);
+      fenceGlassMat.emissiveIntensity = t * 0.15;
+
+      ambient.color.copy(DAY.ambientColor).lerp(NIGHT.ambientColor, t);
+      ambient.intensity = THREE.MathUtils.lerp(DAY.ambientIntensity, NIGHT.ambientIntensity, t);
+
+      hemi.color.copy(DAY.hemiSky).lerp(NIGHT.hemiSky, t);
+      hemi.groundColor.copy(DAY.hemiGround).lerp(NIGHT.hemiGround, t);
+      hemi.intensity = THREE.MathUtils.lerp(DAY.hemiIntensity, NIGHT.hemiIntensity, t);
+
+      sun.color.copy(DAY.sunColor).lerp(NIGHT.sunColor, t);
+      sun.intensity = THREE.MathUtils.lerp(DAY.sunIntensity, NIGHT.sunIntensity, t);
+      sun.position.lerpVectors(DAY.sunPosition, NIGHT.sunPosition, t);
+
+      rim.color.copy(DAY.rimColor).lerp(NIGHT.rimColor, t);
+      rim.intensity = THREE.MathUtils.lerp(DAY.rimIntensity, NIGHT.rimIntensity, t);
+
+      wallMat.color.copy(DAY.wall).lerp(NIGHT.wall, t);
+      roofMat.color.copy(DAY.roof).lerp(NIGHT.roof, t);
+      ghostRoofMat.color.copy(DAY.roof).lerp(NIGHT.roof, t);
+      trimMat.color.copy(DAY.trim).lerp(NIGHT.trim, t);
+      for (const mat of roofSlabMats) {
+        mat.color.copy(DAY.roofSlab).lerp(NIGHT.roofSlab, t);
+      }
+
+      // 剖切查看时降低玻璃不透明度，让室内家具透出来；透视模式再压淡一层
+      const glassClear =
+        (cutawayFloor === null ? 1 : 0.1) * (xrayEnabled ? CONFIG.xray.glassOpacity : 1);
+      glassMat.opacity = THREE.MathUtils.lerp(DAY.glassOpacity, NIGHT.glassOpacity, t) * glassClear;
+
+      // 室内暖光：白天也保留柔和的暖光（便于看进屋里），夜间更亮；剖切时单独加强
+      interiorLights.forEach((light, i) => {
+        if (cutawayFloor === null) {
+          const base = THREE.MathUtils.lerp(interiorDayIntensity[i], interiorNightIntensity[i], t);
+          light.intensity = xrayEnabled ? Math.max(base, CONFIG.xray.interiorLight) : base;
+        } else if (cutawayFloor === i) {
+          light.intensity = CONFIG.lights.interiorCutaway + t * 2.5;
+        } else {
+          light.intensity = 0;
+        }
+      });
+      glassMat.emissiveIntensity = THREE.MathUtils.lerp(
+        DAY.glassEmissiveIntensity,
+        NIGHT.glassEmissiveIntensity,
+        t
+      );
+      for (const lamp of windowLights) {
+        lamp.intensity = THREE.MathUtils.lerp(
+          DAY.windowLightIntensity,
+          NIGHT.windowLightIntensity,
+          t
+        );
+      }
+
+      // 红灯笼：灯身保持饱和红，夜间柔光交给叠加光晕 Sprite
+      lanternRedMat.emissiveIntensity = THREE.MathUtils.lerp(0.7, 1.9, t);
+      const haloFade = THREE.MathUtils.smoothstep(t, 0.08, 0.7);
+      lanternHaloMat.opacity = 0.62 * haloFade;
+      lanternHaloMat.visible = haloFade > 0.02;
+
+      // 曝光由 OutputPass 在最后统一做 ACES 色调映射；这里只随昼夜改变曝光
+      renderer.toneMappingExposure = THREE.MathUtils.lerp(DAY.exposure, NIGHT.exposure, t);
+
+      // HDR 环境光同步减弱：白天让金属 / 玻璃映出天空，夜晚只留一点冷调反射
+      scene.environmentIntensity = THREE.MathUtils.lerp(
+        DAY.environmentIntensity,
+        NIGHT.environmentIntensity,
+        t
+      );
+
+      // 泛光只在夜色中渐入：白天 0，深夜 BLOOM_STRENGTH（0.3~0.5 的克制区间）
+      bloomPass.strength = BLOOM_STRENGTH * THREE.MathUtils.smoothstep(t, 0.35, 0.95);
+      // 白天直接跳过整条 Bloom Pass，省下 5 次降采样模糊
+      bloomPass.enabled = t > 0.01;
+    }
+
+    // ---------- 自适应窗口 ----------
+    window.addEventListener('resize', onResize);
+
+    function onResize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      renderer.setPixelRatio(pixelRatio);
+      renderer.setSize(w, h);
+      composer.setPixelRatio(pixelRatio);
+      composer.setSize(w, h);
+      labelRenderer.setSize(w, h);
+    }
+
+    // ---------- 渲染循环 ----------
+    const clock = new THREE.Clock();
+
+    renderer.setAnimationLoop(() => {
+      renderer.info.reset();
+      const dt = Math.min(clock.getDelta(), 0.1); // 防止切回标签页时出现跳变
+      frameTimeMs += (dt * 1000 - frameTimeMs) * 0.08;
+      updateDayNight(dt);
+      particles.update(dt, nightMix);
+      fallingLeaves.update(dt);
+
+      const time = clock.elapsedTime;
+
+      // 水面波纹缓慢流动：只改纹理 offset，不增加任何几何 / draw call
+      waterBumpTexture.offset.y -= dt * CONFIG.water.uvDriftSpeed;
+      waterBumpTexture.offset.x = Math.sin(time * CONFIG.water.uvSwaySpeed) * CONFIG.water.uvSwayAmount;
+      waterBumpTexture.rotation = Math.sin(time * 0.11) * 0.15;
+
+      // bump 强度与透明度做轻微呼吸，让水面自己“活着”，而不是一张静态贴图
+      const bumpBreath = Math.sin(time * CONFIG.water.bumpBreathSpeed);
+      riverWaterMat.bumpScale =
+        CONFIG.materials.waterBumpScale * (1 + bumpBreath * CONFIG.water.bumpBreathAmp);
+      riverWaterMat.opacity = THREE.MathUtils.clamp(
+        CONFIG.materials.waterOpacity
+          + Math.sin(time * CONFIG.water.opacityBreathSpeed) * CONFIG.water.opacityBreathAmp
+          - nightMix * 0.03,
+        0.55,
+        1.0
+      );
+
+      // 草叶风场：把时间推进到共享 uniform（不重建 geometry / 不增加 draw call）
+      grassWindUniforms.uTime.value = time;
+
+      // 水面涟漪：扩散 + 淡出
+      updateWaterRipples(time, nightMix);
+
+      // ---------- 生活化细节动画：乌篷船 / 芦苇 / 孔明灯 ----------
+      // 全部基于同一个 clock.elapsedTime 的正弦摆动，不新增计时器；
+      // 芦苇与孔明灯只改 InstancedMesh 的实例矩阵，开销与数量线性相关但 draw call 不变。
+      const boat = lifeDetails.boat.group;
+      boat.position.y = lifeDetails.boat.homeY + Math.sin(time * 0.75) * 0.05;
+      boat.rotation.x = Math.sin(time * 0.6 + 0.8) * 0.035;    // 随波起伏
+      boat.rotation.z = Math.sin(time * 0.42 + 1.7) * 0.014;   // 轻微横摇
+      boat.rotation.y = lifeDetails.boat.baseYaw + Math.sin(time * 0.23) * 0.03;
+
+      updateReeds(lifeDetails.reeds, time);
+      updateSkyLanterns(lifeDetails.skyLanterns, dt, time, nightMix);
+
+      if (roamActive) {
+        updateRoam(dt);
+      } else {
+        controls.update();
+      }
+
+      composer.render();
+      labelRenderer.render(scene, camera);
+    });
+
+    // 自动化验证 / 调试钩子（不影响页面功能）
+    window.__villaDebug = {
+      scene,
+      camera,
+      controls,
+      sun,
+      renderer,
+      floorGroups,
+      floorWallMeshes,
+      outerWallMeshes,
+      wallPanelsByFloor,
+      interiorWallMeshes,
+      ceilingSlabs,
+      stairStepMeshes,
+      stairRailMeshes,
+      extraFloorLabels,
+      floorLabels,
+      interiorLights,
+      xray: {
+        get enabled() { return xrayEnabled; },
+        set: setXray,
+        get wallOpacity() { return wallMat.opacity; }
+      },
+      stairs: {
+        get stepCount() { return stairStepMeshes.length; },
+        get railCount() { return stairRailMeshes.length; },
+        get baseY() { return STAIR.baseY; },
+        get topY() { return STAIR.topY; },
+        get hole() { return { ...STAIR.hole }; }
+      },
+      interior: {
+        get wallCount() { return interiorWallMeshes.length; },
+        get ceilingCount() { return ceilingSlabs.length; },
+        get floorHeights() { return ROAM_FLOORS.map((f) => f.y); },
+        get doorPass() { return ROAM_DOOR_PASS; }
+      },
+      courtyard,
+      fenceGroup,
+      treeGroup,
+      forestGroup,
+      stonePath,
+      particles,
+      fallingLeaves,
+      grassMesh,
+      shrubMesh,
+      stoneMesh,
+      bridgeGroup,
+      riverWaterMat,
+      waterRipples,
+      grassWindUniforms,
+      fireflyLights: particles.fireflyLights,
+      CONFIG,
+      get nightMix() { return nightMix; },
+      water: {
+        get roughness() { return riverWaterMat.roughness; },
+        get metalness() { return riverWaterMat.metalness; },
+        get envMapIntensity() { return riverWaterMat.envMapIntensity; },
+        get emissiveIntensity() { return riverWaterMat.emissiveIntensity; },
+        get bumpScale() { return riverWaterMat.bumpScale; },
+        get opacity() { return riverWaterMat.opacity; }
+      },
+      forest: {
+        get treeCount() { return forestTrees.length; },
+        get leafCanopies() { return forestLeafMesh.count; },
+        get pineCanopies() { return forestPineMesh.count; },
+        get trunkInstances() { return forestTrunkMesh.count; }
+      },
+      meadowMat,
+      wallMat,
+      roofMat,
+      glassMat,
+      fenceGlassMat,
+      courtyardGroundMat,
+      showOnlyFloor,
+      composer,
+      loadModel,
+      externalModels,
+      environment: {
+        get ready() { return Boolean(scene.environment); },
+        get intensity() { return scene.environmentIntensity; }
+      },
+      roundedBox: {
+        radius: ROUNDED_RADIUS,
+        segments: ROUNDED_SEGMENTS,
+        get cachedGeometries() { return roundedBoxGeoCache.size; }
+      },
+      toneMapping: {
+        get mode() { return renderer.toneMapping; },
+        get exposure() { return renderer.toneMappingExposure; },
+        get outputPassLast() { return composer.passes[composer.passes.length - 1] instanceof OutputPass; }
+      },
+      bloom: {
+        get strength() { return bloomPass.strength; },
+        get radius() { return bloomPass.radius; },
+        get threshold() { return bloomPass.threshold; },
+        get enabled() { return bloomPass.enabled; }
+      },
+      get nightMix() { return nightMix; },
+      garden: {
+        get grassCount() { return grassMesh.count; },
+        get grassClumpSize() { return GRASS_CLUMP_SIZE; },
+        get forestTreeCount() { return forestTrees.length; },
+        get shrubCount() { return shrubMesh.count; },
+        get stoneCount() { return stoneMesh.count; },
+        get leafCount() { return fallingLeaves.count; },
+        get drawCalls() { return renderer.info.render.calls; },
+        get triangles() { return renderer.info.render.triangles; },
+        get frameMs() { return Number(frameTimeMs.toFixed(2)); }
+      },
+      life: {
+        get porchLanterns() { return lifeDetails.lanterns.porch.children.filter((c) => c.isGroup).length; },
+        get bridgeLanterns() { return lifeDetails.lanterns.bridge.children.filter((c) => c.isGroup).length; },
+        get stoneTableParts() { return lifeDetails.stoneTable.children.length; },
+        get bambooCulms() { return lifeDetails.bamboo.getObjectByName('bamboo-culms').count; },
+        get bambooLeaves() { return lifeDetails.bamboo.getObjectByName('bamboo-leaves').count; },
+        get reedStems() { return lifeDetails.reeds.stemMesh.count; },
+        get skyLanterns() { return lifeDetails.skyLanterns.bodyMesh.count; },
+        get skyLanternsVisible() { return lifeDetails.skyLanterns.group.visible; },
+        get boatY() { return lifeDetails.boat.group.position.y; },
+        get lanternEmissive() { return lanternRedMat.emissiveIntensity; }
+      },
+      lifeDetails,
+      roam: {
+        get active() { return roamActive; },
+        get locked() { return roamLocked; },
+        get eyeHeight() { return EYE_HEIGHT; },
+        get position() { return camera.position.clone(); },
+        get velocity() { return roamVelocity.clone(); },
+        get keys() { return { ...keys }; },
+        get orbitEnabled() { return controls.enabled; },
+        get pointerEnabled() { return fpControls.enabled; },
+        get fov() { return camera.fov; },
+        get feetY() { return camera.position.y - EYE_HEIGHT; },
+        get floorIndex() { return activeRoamFloor(camera.position.y - EYE_HEIGHT); },
+        get groundY() {
+          return sampleRoamGround(camera.position.x, camera.position.z, camera.position.y - EYE_HEIGHT);
+        },
+        enter: enterRoam,
+        exit: exitRoam,
+        setKey(code, down) {
+          if (Object.hasOwn(keys, code)) keys[code] = Boolean(down);
+        }
+      }
+    };
+
+    // 初始化完成标记（自动化验证 / 调试用，不影响页面功能）
+    document.documentElement.dataset.villaReady = '1';
+  </script>
+</body>
+</html>
